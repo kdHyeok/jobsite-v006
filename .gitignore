@@ -1,0 +1,11 @@
+.env
+.secrets/
+*.log
+.DS_Store
+.idea/
+.vscode/
+backend/.gradle/
+backend/build/
+frontend/node_modules/
+frontend/dist/
+artifacts/

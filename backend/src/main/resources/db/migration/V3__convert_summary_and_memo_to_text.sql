@@ -1,0 +1,3 @@
+ALTER TABLE companies
+    ALTER COLUMN summary TYPE TEXT,
+    ALTER COLUMN memo TYPE TEXT;
