@@ -16,30 +16,67 @@
 
 ## Compose
 
-- `compose.yaml` 로컬 빌드. `compose.prod.yaml` 은 GHCR 이미지 override(서버용).
+- `compose.yaml` 하나로 로컬·서버 모두 소스에서 빌드한다. 이미지 레지스트리를 쓰지 않는다.
 - 비밀값: `.secrets/postgres_password`, `.secrets/google_client_secret` → compose secret → 컨테이너 `/run/secrets/<프로퍼티키>` → Spring `configtree`. 파일 이름이 프로퍼티 키다.
 - 설정: `.env` 의 `PUBLIC_BASE_URL`, `APP_ADMIN_EMAIL`, `GOOGLE_CLIENT_ID`, `SESSION_COOKIE_SECURE`(HTTPS 뒤에서만 true).
 - 새 키를 추가하면 `.env.example`·`compose.yaml`·`docs/local-dev.md` 세 곳.
 
-## 배포 방식 (현재)
+## 배포 — 서버에서 직접 pull
 
-**이미지 기반.** 서버에 git 은 필요 없다.
+CI/CD 파이프라인은 없다. 서버에 SSH 로 들어가 `git pull` 하고 다시 올린다.
+
+### 서버 준비 (1회)
+
+```bash
+git clone https://github.com/kdHyeok/jobsite-v006.git ~/jobsite-v006
+cd ~/jobsite-v006
+cp .env.example .env
+mkdir -p .secrets && chmod 700 .secrets
+python3 -c 'import secrets; print(secrets.token_urlsafe(36))' > .secrets/postgres_password
+printf '%s' '<Google 클라이언트 시크릿>' > .secrets/google_client_secret
+chmod 644 .secrets/*
+```
+
+`.env` 를 tailnet 값으로 채운다. `.env` 와 `.secrets/` 는 `.gitignore` 대상이라 `git pull` 이 덮어쓰지 않는다.
 
 ```
-main push → GitHub Actions (.github/workflows/deploy.yml)
-  build job: backend/frontend 이미지 → ghcr.io/kdhyeok/jobsite-v006-{backend,frontend}:{latest,sha}
-  deploy job: tailscale/github-action 으로 tailnet 합류 → ssh 서버
-              scp compose.yaml compose.prod.yaml → docker compose pull → up -d
+PUBLIC_BASE_URL=https://<머신>.<tailnet>.ts.net:8443
+SESSION_COOKIE_SECURE=true
+APP_ADMIN_EMAIL=<본인 Gmail>
+GOOGLE_CLIENT_ID=<클라이언트 ID>
 ```
 
-서버 준비(1회): `~/jobsite-v006/` 에 `.env`(`PUBLIC_BASE_URL=https://<머신>.<tailnet>.ts.net:8443`, `SESSION_COOKIE_SECURE=true`) 와 `.secrets/` 두 파일, `docker login ghcr.io`(read:packages PAT). Google Console 에 tailnet redirect URI 도 등록.
+Google Cloud Console 의 Authorized redirect URI 에 `{PUBLIC_BASE_URL}/login/oauth2/code/google` 을 추가한다. 로컬용과 별개 항목이다.
 
-GitHub secrets: `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`. Tailscale ACL 은 `tag:github-ci` → 서버 `:22` 만.
+### 매 배포
 
-배포 후 서버에서: `bash scripts/smoke.sh https://<머신>.<tailnet>.ts.net:8443` 가 PASS 여야 한다.
+```bash
+cd ~/jobsite-v006
+git pull
+docker compose up -d --build
+bash scripts/smoke.sh          # PASS 여야 배포 완료
+```
 
-롤백: `IMAGE_TAG=<이전sha> docker compose -f compose.yaml -f compose.prod.yaml up -d`.
+`smoke.sh` 는 `.env` 의 `PUBLIC_BASE_URL` 을 읽는다. 서버에서 tailnet 주소로 도는지 출력 첫 줄에서 확인한다.
 
-## tailnet 전환 시 확인
+### 롤백
+
+```bash
+git log --oneline -5
+git checkout <이전 커밋>
+docker compose up -d --build
+```
+
+마이그레이션이 이미 적용된 뒤라면 코드만 되돌려도 스키마는 남는다. Flyway 는 되돌리지 않으므로, 스키마를 바꾼 배포의 롤백은 되돌림 마이그레이션을 새로 쓴다.
+
+## tailnet 노출
+
+로컬 `127.0.0.1:8088` 에서 스모크가 PASS 한 뒤에만:
+
+```bash
+tailscale serve --bg --yes --https=8443 http://127.0.0.1:8088
+```
 
 `tailscale serve` 가 nginx 에 넘기는 Host 가 `127.0.0.1:8088` 일 수 있다. `redirect_uri` 는 `PUBLIC_BASE_URL` 로 만들어지므로 영향이 없지만, 스모크의 redirect_uri 줄로 실제 값을 반드시 본다.
+
+Tailscale Serve 접근은 같은 tailnet 에 로그인하고 ACL 상 허용된 사용자로 제한된다. tailnet 안에서도 서비스 로그인은 별도로 필요하다.

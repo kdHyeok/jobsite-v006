@@ -1,0 +1,8 @@
+# 서버에서 git pull 로 배포하므로 줄바꿈을 저장소 기준(LF)으로 고정한다.
+# Windows 에서 CRLF 로 체크아웃되면 scripts/smoke.sh 가 bash 에서 $'\r' 오류로 깨진다.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.jar binary

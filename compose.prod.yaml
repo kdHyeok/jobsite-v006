@@ -1,7 +1,0 @@
-# 배포 서버 전용 override: 로컬 빌드 대신 GHCR 이미지 사용
-# 사용: IMAGE_TAG=<sha> docker compose -f compose.yaml -f compose.prod.yaml up -d
-services:
-  backend:
-    image: ghcr.io/kdhyeok/jobsite-v006-backend:${IMAGE_TAG:-latest}
-  frontend:
-    image: ghcr.io/kdhyeok/jobsite-v006-frontend:${IMAGE_TAG:-latest}

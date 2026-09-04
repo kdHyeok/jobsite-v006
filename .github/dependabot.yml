@@ -1,8 +1,0 @@
-# SHA로 고정한 액션을 손으로 갱신하지 않도록 Dependabot이 PR을 올린다.
-# 주석의 버전(# v7.0.1)까지 함께 갱신해 준다.
-version: 2
-updates:
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
