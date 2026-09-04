@@ -1,0 +1,51 @@
+# 결정 기록
+
+되돌리고 싶은 결정이 있으면 먼저 여기서 이유를 읽는다. 되돌리면 그 이유도 여기에 적는다.
+
+## 세션 쿠키는 `SameSite=Lax` (Strict 아님)
+Strict 는 accounts.google.com 에서 돌아오는 콜백에 세션 쿠키를 싣지 않아 `authorization_request_not_found` 가 난다. 실제로 겪었다. Lax 는 cross-site POST/fetch 를 여전히 막고, CSRF 의 주축은 `XSRF-TOKEN` 토큰이다.
+
+## CSRF 핸들러는 평문 `CsrfTokenRequestAttributeHandler`
+Spring Security 6+ 기본 Xor 핸들러는 마스킹 토큰을 기대해 쿠키 원본 토큰을 거부한다(모든 POST 가 403). 토큰이 응답 본문에 실리지 않으므로 BREACH 위험은 해당 없다.
+
+## 인증은 Google OIDC 하나, 비밀번호 로그인 없음
+사용자 결정. 락아웃 위험은 Google 측 설정 문제일 때만 생기고 그때는 비밀번호가 있어도 Google 을 고쳐야 한다. 복구 경로는 DB 직접 접근. `APP_ADMIN_EMAIL` 상시 규칙이 관리자 확보를 보장한다. 단 Google 동의 화면이 Testing 이면 등록된 테스트 사용자만 로그인된다.
+
+## `APP_ADMIN_EMAIL` 은 상시 규칙
+로그인마다 ADMIN/ACTIVE 로 복구된다. 설정 파일이 권한의 최종 근거. 화면에서 내려도 다음 로그인에 돌아온다 — 의도된 동작이다.
+
+## `redirect_uri` 는 `PUBLIC_BASE_URL` 로 명시 조립
+`X-Forwarded-*` 추론은 nginx 내부 80 / 외부 8088·8443 차이로 세 번 어긋났다(redirect_uri_mismatch 두 번, /admin 302 한 번). 환경이 바뀌면 `.env` 한 줄만 바꾼다.
+
+## 프런트는 base URL 을 모른다
+same-origin 이므로 상대 경로가 정답이고, base URL 을 알면 포트 버그에 노출된다. 경로 상수(`routes.ts`)와 배포 값(`PUBLIC_BASE_URL`)은 다른 종류다 — 경로를 `.env` 에 넣지 않는다.
+
+## 소유자 조회는 `findByIdAndOwnerId`
+`findById` 후 비교는 비교를 빠뜨리면 그대로 유출이다. 쿼리에 소유자 조건을 넣으면 구조적으로 불가능. 타인 데이터는 존재를 알리지 않도록 404.
+
+## Google 사용자 해석과 상태 검사를 분리
+`resolveGoogleUser`(트랜잭션, 커밋) → 상태 검사(밖). 안에서 예외를 던지면 첫 로그인의 PENDING 계정이 롤백되어 "신청 접수" 안내와 실제 DB 가 어긋난다.
+
+## 이메일 연결은 `email_verified=true` 일 때만
+미검증 이메일로 기존 계정을 연결하면 계정 탈취가 된다.
+
+## 가입 토글은 "자동 승인 여부" 다. 가입을 막는 상태는 없다 (V8)
+처음엔 "가입 허용/거부" 였는데, 거부는 사용자에게 오류만 보여주고 관리자에게는 아무 흔적도 남기지 않았다. 지금은 첫 로그인이 항상 계정을 만들고, 토글이 그 초기 상태(ACTIVE / PENDING)만 정한다. 승인 대기 목록이 곧 대기열이라 관리자가 누가 왔는지 볼 수 있다. V8 이 컬럼을 `auto_approve_signup` 으로 개명하고 기존 동작(승인 필요)을 보존하기 위해 `false` 로 초기화했다.
+
+## 편집 가능한 계정 정보는 `display_name` 만
+이메일은 Google 신원이자 `APP_ADMIN_EMAIL` 규칙·계정 연결의 키다. 편집을 허용하면 관리자 권한이 다른 사람에게 넘어가거나 계정이 합쳐질 수 있다. 관리자 화면의 "정보 수정" 도 이름만 다룬다.
+
+## 계정 삭제는 소유 기업을 함께 지운다
+FK `ON DELETE CASCADE`. 소유자 없는 기업 행을 남기면 소유자 격리 불변 조건이 깨진다. 삭제 전 확인 대화상자에 이 점을 명시한다.
+
+## API 문서는 Swagger, ADMIN 전용
+손으로 쓴 API 목록은 첫 변경에 썩는다. `@Operation` 이 유일한 API 설명 위치. 정보 노출이라 관리자만 본다.
+
+## 마이그레이션은 데이터를 지우지 않는다 (V6)
+`password_hash` 삭제 후 `google_sub` 없는 행은 "로그인 수단 없음" 으로 남긴다. 사람이 관리자 화면에서 정리한다.
+
+## nginx 는 상대 리다이렉트 (`absolute_redirect off`)
+기본값은 `$host`(포트 없음) 로 절대 URL 을 만든다.
+
+## 가드레일은 산문보다 실행 파일
+이 프로젝트의 오판은 코드 위치를 몰라서가 아니라 검증 절차(파이프가 exit code 숨김, 응답 오독)와 버전 함정에서 났다. `scripts/smoke.sh` 가 그 검증을 고정한다. AGENTS.md 는 짧게, 코드로 가는 지도로 유지한다.

@@ -17,6 +17,39 @@ spring:
   flyway:
     enabled: true
 
+server:
+  # nginx 가 넘겨주는 X-Forwarded-Proto 를 신뢰한다(HTTPS 뒤에서 secure 판정용).
+  # OAuth redirect_uri 는 여기에 의존하지 않고 app.public-base-url 로 명시 조립한다.
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        # Strict 로 두면 Google 콜백(accounts.google.com 에서 오는 cross-site 네비게이션)에
+        # 세션 쿠키가 실리지 않아 저장해 둔 authorization request 를 찾지 못한다.
+        # Lax 는 top-level GET 네비게이션만 허용하므로 cross-site POST/fetch 는 여전히 막히고,
+        # CSRF 방어의 주축은 XSRF-TOKEN 쿠키와 X-XSRF-TOKEN 헤더가 담당한다.
+        same-site: lax
+        # TLS 종단(tailscale serve) 뒤에 둘 때만 true. 로컬 http 접속에서는 false여야 한다.
+        secure: ${SESSION_COOKIE_SECURE:false}
+
+app:
+  # 브라우저가 보는 이 서비스의 주소. OAuth redirect_uri 를 이 값으로 조립한다.
+  # Google Cloud Console 에 등록한 리다이렉트 URI 의 origin 과 정확히 같아야 한다.
+  public-base-url: ${PUBLIC_BASE_URL:http://127.0.0.1:8088}
+  # 이 이메일의 Google 계정은 로그인할 때마다 ADMIN/ACTIVE 로 보장된다(상시 규칙).
+  # 새 배포에서는 이 계정의 첫 로그인이 시드 데이터 소유 행을 넘겨받는다.
+  admin-email: ${APP_ADMIN_EMAIL:}
+  google:
+    # client-id 는 비밀이 아니므로 .env 로, client-secret 은 compose secret 파일로 주입한다.
+    # 둘 중 하나라도 비어 있으면 Google 로그인은 비활성 상태로 기동한다.
+    client-id: ${GOOGLE_CLIENT_ID:}
+
+springdoc:
+  swagger-ui:
+    operations-sorter: alpha
+    tags-sorter: alpha
+
 management:
   endpoints:
     web:

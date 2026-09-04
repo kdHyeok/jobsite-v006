@@ -132,4 +132,63 @@ a { color: #72c5ff; }
   .detail-card__head { display: grid; }
   .form-grid, .detail-grid .detail-meta { grid-template-columns: 1fr; }
   .field.full { grid-column: auto; }
+  .auth-card { padding: 24px; }
+  .admin-panel { display: grid; }
 }
+
+/* --- 계정 / 관리자 --- */
+.account-chip { display: inline-flex; align-items: baseline; gap: 8px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: rgba(107, 144, 181, .08); color: #cfdcea; font-size: 13px; }
+.account-chip em { font-style: normal; font-size: 11px; font-weight: 700; color: #8ff0df; }
+.muted-note { color: var(--muted); font-size: 12px; }
+.hero-aside { display: grid; gap: 12px; align-content: end; }
+
+.auth-workspace { display: grid; place-items: center; min-height: calc(100vh - 200px); }
+.auth-card { width: min(460px, 100%); padding: 36px; border: 1px solid var(--border); border-radius: 22px; background: var(--panel); box-shadow: 0 24px 70px rgba(0, 0, 0, .2); }
+.auth-card h1 { margin: 0; font-size: 30px; letter-spacing: -.03em; }
+.auth-lead { margin: 12px 0 0; color: var(--muted); line-height: 1.6; font-size: 14px; }
+.auth-switch { margin: 20px 0 0; text-align: center; color: var(--muted); font-size: 13px; }
+.auth-switch button { border: 0; background: transparent; color: #72c5ff; font-weight: 700; padding: 0 4px; }
+
+.admin-panel { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 24px; padding: 22px 24px; border: 1px solid var(--border); border-radius: 18px; background: var(--panel); }
+.admin-panel__text { min-width: 0; }
+.admin-panel .body-copy { font-size: 14px; }
+
+.admin-table-wrap { margin-top: 22px; border: 1px solid var(--border); border-radius: 18px; background: var(--panel); overflow-x: auto; }
+.admin-table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 14px; }
+.admin-table th { text-align: left; padding: 16px 18px; color: #8297af; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+.admin-table td { padding: 14px 18px; border-bottom: 1px solid rgba(145, 181, 221, .08); vertical-align: middle; }
+.admin-table tr:last-child td { border-bottom: 0; }
+.admin-table select { min-height: 38px; border: 1px solid rgba(131, 171, 211, .18); border-radius: 10px; background: rgba(3, 13, 24, .72); color: #ecf4ff; padding: 6px 10px; }
+.admin-table__date { color: var(--muted); white-space: nowrap; }
+.admin-table td.admin-table__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.admin-table__empty { text-align: center; color: var(--muted); padding: 36px; }
+.button.compact { min-height: 34px; padding: 0 12px; font-size: 13px; }
+.self-tag { display: inline-block; margin-left: 8px; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; color: #a7b2c1; background: rgba(151, 163, 180, .1); border: 1px solid rgba(151, 163, 180, .18); }
+.self-tag.warn { color: #ffe18a; background: rgba(255, 193, 65, .1); border-color: rgba(255, 193, 65, .2); }
+
+.status-pill[data-user-status='PENDING'] { color: #ffe18a; background: rgba(255, 193, 65, .1); border-color: rgba(255, 193, 65, .2); }
+.status-pill[data-user-status='ACTIVE'] { color: #93ebcb; background: rgba(68, 204, 159, .1); border-color: rgba(68, 204, 159, .2); }
+.status-pill[data-user-status='SUSPENDED'] { color: #ff9fa8; background: rgba(255, 125, 136, .1); border-color: rgba(255, 125, 136, .22); }
+.status-pill[data-user-status='REJECTED'] { color: #a7b2c1; background: rgba(151, 163, 180, .1); border-color: rgba(151, 163, 180, .18); }
+
+/* --- Google 로그인 --- */
+.google-button { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 22px; text-decoration: none; color: #1f2430; background: #ffffff; border-color: #ffffff; }
+.google-button:hover { filter: brightness(.96); }
+.google-mark { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, #ea4335, #4285f4); color: #fff; font-weight: 800; font-size: 13px; }
+
+/* --- 아바타 / 내 계정 팝오버 --- */
+.user-menu { position: relative; }
+.avatar { width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(85, 226, 202, .35); background: linear-gradient(135deg, rgba(85, 226, 202, .28), rgba(85, 169, 255, .28)); color: #eaf2ff; font-weight: 800; font-size: 16px; display: grid; place-items: center; transition: .16s ease; }
+.avatar:hover { transform: translateY(-1px); filter: brightness(1.1); }
+.popover { position: absolute; right: 0; top: calc(100% + 10px); width: 300px; padding: 18px; display: grid; gap: 12px; border: 1px solid rgba(112, 160, 207, .23); border-radius: 16px; background: #0d1b2c; box-shadow: 0 24px 70px rgba(0, 0, 0, .45); z-index: 30; }
+.popover__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.popover__head strong { font-size: 15px; }
+.popover__email { margin: 0; color: var(--muted); font-size: 13px; word-break: break-all; }
+.popover__form { display: grid; gap: 12px; }
+.popover__actions { display: flex; justify-content: space-between; gap: 8px; }
+
+/* --- 관리자 표 인라인 편집 --- */
+.inline-edit { display: flex; gap: 6px; align-items: center; }
+.inline-edit input { min-height: 34px; width: 150px; border: 1px solid rgba(131, 171, 211, .18); border-radius: 8px; background: rgba(3, 13, 24, .72); color: #ecf4ff; padding: 4px 8px; }
+.name-button { border: 0; background: transparent; color: inherit; padding: 0; text-align: left; text-decoration: underline dotted; text-underline-offset: 3px; }
+.name-button:hover { color: #72c5ff; }

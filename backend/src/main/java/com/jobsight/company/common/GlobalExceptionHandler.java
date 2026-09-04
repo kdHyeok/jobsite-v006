@@ -5,10 +5,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -49,6 +51,33 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiError> handleNotFound(ResourceNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(
                 HttpStatus.NOT_FOUND.value(), "COMPANY_NOT_FOUND", exception.getMessage()
+        ));
+    }
+
+    /** 업무 규칙 위반은 예외가 들고 온 상태코드와 코드값을 그대로 사용한다. */
+    @ExceptionHandler(ApiRuleException.class)
+    ResponseEntity<ApiError> handleRule(ApiRuleException exception) {
+        return ResponseEntity.status(exception.getStatus()).body(ApiError.of(
+                exception.getStatus().value(), exception.getCode(), exception.getMessage()
+        ));
+    }
+
+    /**
+     * 존재하지 않는 경로(예: /api/companies/ 처럼 끝에 슬래시가 붙은 요청)는 404다.
+     * 이 핸들러가 없으면 아래 catch-all이 잡아 500과 ERROR 로그를 남긴다.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    ResponseEntity<ApiError> handleNoResource(NoResourceFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(
+                HttpStatus.NOT_FOUND.value(), "NOT_FOUND", "요청 경로를 찾을 수 없습니다."
+        ));
+    }
+
+    /** catch-all이 인가 실패를 500으로 바꿔버리지 않도록 명시적으로 403을 유지한다. */
+    @ExceptionHandler(AccessDeniedException.class)
+    ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException exception) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(
+                HttpStatus.FORBIDDEN.value(), "FORBIDDEN", "권한이 없습니다."
         ));
     }
 

@@ -33,9 +33,20 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      # 브라우저가 보는 주소. OAuth redirect_uri 를 이 값으로 조립한다.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://127.0.0.1:8088}
+      # 이 이메일의 Google 계정은 항상 ADMIN 이다.
+      APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL}
+      # client-id 는 비밀이 아니다. 비어 있으면 Google 로그인이 비활성 상태로 기동한다.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      # TLS 종단(tailscale serve) 뒤에 둘 때만 true 로 바꾼다.
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     secrets:
+      # 파일 이름이 그대로 Spring 프로퍼티 키가 된다(configtree:/run/secrets/).
       - source: db_password
         target: spring.datasource.password
+      - source: google_client_secret
+        target: app.google.client-secret
     depends_on:
       db:
         condition: service_healthy
@@ -88,6 +99,9 @@ volumes:
 secrets:
   db_password:
     file: ./.secrets/postgres_password
+  # 파일이 비어 있으면 Google 로그인만 비활성된다. 파일 자체는 존재해야 한다.
+  google_client_secret:
+    file: ./.secrets/google_client_secret
 
 networks:
   app:

@@ -18,6 +18,10 @@ public class Company {
     @Id
     private UUID id;
 
+    /** 계정별 데이터 분리의 기준. 소유자는 생성 후 바뀌지 않는다. */
+    @Column(name = "owner_id", nullable = false, updatable = false)
+    private UUID ownerId;
+
     @Column(nullable = false, length = 120)
     private String name;
 
@@ -49,9 +53,10 @@ public class Company {
     protected Company() {
     }
 
-    public Company(String name, String industry, String location, String websiteUrl,
+    public Company(UUID ownerId, String name, String industry, String location, String websiteUrl,
                    CompanyStatus status, String summary, String memo) {
         this.id = UUID.randomUUID();
+        this.ownerId = ownerId;
         this.name = name;
         this.industry = industry;
         this.location = location;
@@ -93,6 +98,7 @@ public class Company {
     }
 
     public UUID getId() { return id; }
+    public UUID getOwnerId() { return ownerId; }
     public String getName() { return name; }
     public String getIndustry() { return industry; }
     public String getLocation() { return location; }

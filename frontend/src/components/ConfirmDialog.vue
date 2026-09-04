@@ -1,18 +1,30 @@
 <script setup lang="ts">
-defineProps<{ companyName: string; deleting: boolean }>()
+withDefaults(
+  defineProps<{
+    title: string
+    /** 굵게 표시되는 대상 이름. */
+    subject: string
+    /** subject 뒤에 이어지는 설명. */
+    detail: string
+    confirmLabel?: string
+    ariaLabel?: string
+    busy: boolean
+  }>(),
+  { confirmLabel: '삭제', ariaLabel: '삭제 확인' },
+)
 const emit = defineEmits<{ confirm: []; cancel: [] }>()
 </script>
 
 <template>
   <div class="modal-backdrop" @mousedown.self="emit('cancel')">
-    <section class="confirm-card" role="alertdialog" aria-modal="true" aria-label="기업 삭제 확인">
+    <section class="confirm-card" role="alertdialog" aria-modal="true" :aria-label="ariaLabel">
       <span class="danger-mark">!</span>
-      <h2>기업 정보를 삭제할까요?</h2>
-      <p><strong>{{ companyName }}</strong>의 기록이 PostgreSQL에서 영구 삭제됩니다.</p>
+      <h2>{{ title }}</h2>
+      <p><strong>{{ subject }}</strong>{{ detail }}</p>
       <div class="modal-actions">
-        <button type="button" class="button secondary" :disabled="deleting" @click="emit('cancel')">취소</button>
-        <button type="button" class="button danger solid" :disabled="deleting" @click="emit('confirm')">
-          {{ deleting ? '삭제 중…' : '삭제' }}
+        <button type="button" class="button secondary" :disabled="busy" @click="emit('cancel')">취소</button>
+        <button type="button" class="button danger solid" :disabled="busy" @click="emit('confirm')">
+          {{ busy ? `${confirmLabel} 중…` : confirmLabel }}
         </button>
       </div>
     </section>
