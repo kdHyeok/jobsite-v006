@@ -46,6 +46,7 @@ check "  me.authenticated (쿠키 없음)"       "false" "$(curl -sS "$BASE/api/
 echo ""
 echo "[미인증 차단]"
 check "GET /api/companies"                  "401"  "$(code "$BASE/api/companies")"
+check "GET /api/postings"                   "401"  "$(code "$BASE/api/postings")"
 check "GET /api/admin/users"                "401"  "$(code "$BASE/api/admin/users")"
 check "GET /api/admin/settings"             "401"  "$(code "$BASE/api/admin/settings")"
 check "GET /swagger-ui/index.html"          "401"  "$(code "$BASE/swagger-ui/index.html")"

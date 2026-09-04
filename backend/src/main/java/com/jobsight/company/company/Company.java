@@ -1,15 +1,22 @@
 package com.jobsight.company.company;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -25,18 +32,32 @@ public class Company {
     @Column(nullable = false, length = 120)
     private String name;
 
-    @Column(length = 120)
-    private String industry;
-
-    @Column(length = 160)
-    private String location;
-
     @Column(name = "website_url", length = 500)
     private String websiteUrl;
 
+    /** 업종 다중값. 입력한 순서를 유지한다. */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "company_industries", joinColumns = @JoinColumn(name = "company_id"))
+    @Column(name = "industry", length = 60, nullable = false)
+    private Set<String> industries = new LinkedHashSet<>();
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private CompanyStatus status;
+    @Column(name = "company_size", length = 20)
+    private CompanySize companySize;
+
+    /** 원 단위. 억/조 표기는 화면에서 만든다. */
+    @Column(name = "annual_revenue")
+    private Long annualRevenue;
+
+    @Column(name = "employee_count")
+    private Integer employeeCount;
+
+    @Column(length = 200)
+    private String address;
+
+    /** 설립연월. 연월만 입력받고 1일로 저장한다. */
+    @Column(name = "founded_on")
+    private LocalDate foundedOn;
 
     @Column(columnDefinition = "TEXT")
     private String summary;
@@ -53,29 +74,28 @@ public class Company {
     protected Company() {
     }
 
-    public Company(UUID ownerId, String name, String industry, String location, String websiteUrl,
-                   CompanyStatus status, String summary, String memo) {
+    public Company(UUID ownerId, CompanyAttributes attributes) {
         this.id = UUID.randomUUID();
         this.ownerId = ownerId;
-        this.name = name;
-        this.industry = industry;
-        this.location = location;
-        this.websiteUrl = websiteUrl;
-        this.status = status;
-        this.summary = summary;
-        this.memo = memo;
+        apply(attributes);
     }
 
-    public void update(String name, String industry, String location, String websiteUrl,
-                       CompanyStatus status, String summary, String memo) {
-        this.name = name;
-        this.industry = industry;
-        this.location = location;
-        this.websiteUrl = websiteUrl;
-        this.status = status;
-        this.summary = summary;
-        this.memo = memo;
+    public void update(CompanyAttributes attributes) {
+        apply(attributes);
         this.updatedAt = Instant.now();
+    }
+
+    private void apply(CompanyAttributes attributes) {
+        this.name = attributes.name();
+        this.websiteUrl = attributes.websiteUrl();
+        this.industries = new LinkedHashSet<>(attributes.industries());
+        this.companySize = attributes.companySize();
+        this.annualRevenue = attributes.annualRevenue();
+        this.employeeCount = attributes.employeeCount();
+        this.address = attributes.address();
+        this.foundedOn = attributes.foundedOn();
+        this.summary = attributes.summary();
+        this.memo = attributes.memo();
     }
 
     @PrePersist
@@ -100,10 +120,13 @@ public class Company {
     public UUID getId() { return id; }
     public UUID getOwnerId() { return ownerId; }
     public String getName() { return name; }
-    public String getIndustry() { return industry; }
-    public String getLocation() { return location; }
     public String getWebsiteUrl() { return websiteUrl; }
-    public CompanyStatus getStatus() { return status; }
+    public Set<String> getIndustries() { return industries; }
+    public CompanySize getCompanySize() { return companySize; }
+    public Long getAnnualRevenue() { return annualRevenue; }
+    public Integer getEmployeeCount() { return employeeCount; }
+    public String getAddress() { return address; }
+    public LocalDate getFoundedOn() { return foundedOn; }
     public String getSummary() { return summary; }
     public String getMemo() { return memo; }
     public Instant getCreatedAt() { return createdAt; }

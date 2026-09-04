@@ -2,7 +2,8 @@ package com.jobsight.company.company;
 
 import com.jobsight.company.auth.CurrentUser;
 import com.jobsight.company.common.ResourceNotFoundException;
-import com.jobsight.company.company.dto.CompanyCreateRequest;
+import com.jobsight.company.company.dto.CompanyRequest;
+import com.jobsight.company.posting.JobPostingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,13 +26,19 @@ class CompanyServiceTest {
     @Mock
     private CompanyRepository repository;
     @Mock
+    private JobPostingService postings;
+    @Mock
     private CurrentUser currentUser;
 
     private CompanyService service;
 
     @BeforeEach
     void setUp() {
-        service = new CompanyService(repository, currentUser);
+        service = new CompanyService(repository, postings, currentUser);
+    }
+
+    private static CompanyRequest request(String name, List<String> industries, String website, String summary) {
+        return new CompanyRequest(name, website, industries, null, null, null, null, null, summary, null);
     }
 
     @Test
@@ -43,15 +50,28 @@ class CompanyServiceTest {
             return company;
         });
 
-        var response = service.create(new CompanyCreateRequest(
-                "  테스트 기업  ", "  ", null, "", CompanyStatus.INTERESTED, " 요약 ", "  "
-        ));
+        var response = service.create(request("  테스트 기업  ", List.of(), "", " 소개 "));
 
         assertThat(response.name()).isEqualTo("테스트 기업");
-        assertThat(response.industry()).isNull();
         assertThat(response.websiteUrl()).isNull();
-        assertThat(response.summary()).isEqualTo("요약");
-        assertThat(response.memo()).isNull();
+        assertThat(response.summary()).isEqualTo("소개");
+        assertThat(response.industries()).isEmpty();
+    }
+
+    /** 업종은 다중 입력이고, 빈 값·중복은 걸러내되 입력 순서는 유지한다. */
+    @Test
+    void createKeepsIndustryOrderAndDropsBlanksAndDuplicates() {
+        given(currentUser.id()).willReturn(OWNER_ID);
+        given(repository.save(any(Company.class))).willAnswer(invocation -> {
+            Company company = invocation.getArgument(0);
+            company.onCreate();
+            return company;
+        });
+
+        var response = service.create(
+                request("테스트", List.of(" IT서비스 ", "", "금융권", "IT서비스", "  "), null, null));
+
+        assertThat(response.industries()).containsExactly("IT서비스", "금융권");
     }
 
     @Test
@@ -67,8 +87,8 @@ class CompanyServiceTest {
 
     /**
      * 계정별 데이터 분리의 핵심 검증.
-     * 다른 계정 소유의 id로 접근하면 소유자 조건이 붙은 쿼리가 비어 돌아오므로
-     * 읽기·수정·삭제 모두 존재를 알리지 않고 404가 된다.
+     * 다른 계정 소유의 id 로 접근하면 소유자 조건이 붙은 쿼리가 비어 돌아오므로
+     * 읽기·삭제 모두 존재를 알리지 않고 404 가 된다.
      */
     @Test
     void otherOwnersCompanyIsNotReachable() {

@@ -2,6 +2,7 @@ package com.jobsight.company.company;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,6 +16,9 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
      * findById 후 소유자를 비교하는 방식은 비교를 빠뜨리면 그대로 유출이 되므로 쓰지 않는다.
      */
     Optional<Company> findByIdAndOwnerId(UUID id, UUID ownerId);
+
+    /** 공고 목록에서 기업 이름을 한 번에 채우기 위한 조회(N+1 방지). */
+    List<Company> findAllByIdInAndOwnerId(Collection<UUID> ids, UUID ownerId);
 
     long countByOwnerId(UUID ownerId);
 }

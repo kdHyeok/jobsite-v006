@@ -1,9 +1,8 @@
 package com.jobsight.company.company;
 
 import com.jobsight.company.common.ApiPaths;
-import com.jobsight.company.company.dto.CompanyCreateRequest;
+import com.jobsight.company.company.dto.CompanyRequest;
 import com.jobsight.company.company.dto.CompanyResponse;
-import com.jobsight.company.company.dto.CompanyUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -32,31 +31,32 @@ public class CompanyController {
         this.service = service;
     }
 
-    @Operation(summary = "내 기업 목록", description = "최근 수정 순.")
+    @Operation(summary = "내 기업 목록", description = "최근 수정 순. 공고 리스트는 담기지 않는다(상세에서 채워진다).")
     @GetMapping
     public List<CompanyResponse> findAll() {
         return service.findAll();
     }
 
-    @Operation(summary = "기업 상세", description = "타인 소유이거나 없으면 404.")
+    @Operation(summary = "기업 상세",
+            description = "openPostings 에 마감이 지나지 않은 이 기업의 공고가 마감 임박 순으로 담긴다. 타인 소유이거나 없으면 404.")
     @GetMapping("/{id}")
     public CompanyResponse findById(@PathVariable UUID id) {
         return service.findById(id);
     }
 
-    @Operation(summary = "기업 생성", description = "소유자는 현재 로그인 계정으로 고정된다.")
+    @Operation(summary = "기업 생성", description = "소유자는 현재 로그인 계정으로 고정된다. 업종은 여러 개 보낼 수 있다.")
     @PostMapping
-    public ResponseEntity<CompanyResponse> create(@Valid @RequestBody CompanyCreateRequest request) {
+    public ResponseEntity<CompanyResponse> create(@Valid @RequestBody CompanyRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
     }
 
     @Operation(summary = "기업 수정", description = "타인 소유이거나 없으면 404.")
     @PutMapping("/{id}")
-    public CompanyResponse update(@PathVariable UUID id, @Valid @RequestBody CompanyUpdateRequest request) {
+    public CompanyResponse update(@PathVariable UUID id, @Valid @RequestBody CompanyRequest request) {
         return service.update(id, request);
     }
 
-    @Operation(summary = "기업 삭제", description = "타인 소유이거나 없으면 404.")
+    @Operation(summary = "기업 삭제", description = "이 기업에 연결된 채용공고도 함께 삭제된다. 타인 소유이거나 없으면 404.")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.delete(id);

@@ -25,9 +25,26 @@ vi.mock('../api/companies', () => {
   return {
     ApiClientError,
     listCompanies: vi.fn(() => Promise.resolve([])),
+    getCompany: vi.fn(),
     createCompany: vi.fn(),
     updateCompany: vi.fn(),
     deleteCompany: vi.fn(),
+  }
+})
+
+vi.mock('../api/postings', () => {
+  class ApiClientError extends Error {
+    fieldErrors = {}
+  }
+  return {
+    ApiClientError,
+    listPostings: vi.fn(() => Promise.resolve([])),
+    listArchivedPostings: vi.fn(() => Promise.resolve([])),
+    createPosting: vi.fn(),
+    updatePosting: vi.fn(),
+    changePostingStage: vi.fn(),
+    setPostingArchived: vi.fn(),
+    deletePosting: vi.fn(),
   }
 })
 
@@ -143,6 +160,17 @@ describe('App 접근 제어', () => {
     await flushPromises()
 
     expect(wrapper.get('.avatar').text()).toBe('A')
+  })
+
+  it('/postings 에서는 채용공고 보드를 보여준다', async () => {
+    setPath(ROUTES.postings)
+    vi.mocked(auth.fetchMe).mockResolvedValue(member)
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('마감이 가까운 공고부터 처리하세요.')
+    expect(wrapper.find('.tab-bar').exists()).toBe(true)
   })
 
   /** 일반 계정에게는 관리자 링크도, /admin 화면도 주지 않는다. */

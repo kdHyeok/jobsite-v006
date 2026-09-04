@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,21 +42,25 @@ class CompanyControllerTest {
     @Test
     void listReturnsCompanies() throws Exception {
         var company = new CompanyResponse(
-                UUID.randomUUID(), "테스트 기업", null, null, null,
-                CompanyStatus.INTERESTED, null, null, Instant.now(), Instant.now()
+                UUID.randomUUID(), "테스트 기업", null,
+                List.of("IT서비스", "금융권"), CompanySize.MEDIUM,
+                1_000_000_000L, 250, "서울 강남", LocalDate.of(2015, 3, 1),
+                null, null, List.of(), Instant.now(), Instant.now()
         );
         given(service.findAll()).willReturn(List.of(company));
 
         mockMvc.perform(get("/api/companies"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("테스트 기업"));
+                .andExpect(jsonPath("$[0].name").value("테스트 기업"))
+                .andExpect(jsonPath("$[0].industries[0]").value("IT서비스"))
+                .andExpect(jsonPath("$[0].companySize").value("MEDIUM"));
     }
 
     @Test
     void invalidCreateReturnsFieldErrors() throws Exception {
         mockMvc.perform(post("/api/companies")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"\",\"status\":\"INTERESTED\"}"))
+                        .content("{\"name\":\"\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.fieldErrors.name").exists());
@@ -65,7 +70,7 @@ class CompanyControllerTest {
     void invalidEnumReturnsInvalidRequest() throws Exception {
         mockMvc.perform(post("/api/companies")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"테스트 기업\",\"status\":\"NOT_A_STATUS\"}"))
+                        .content("{\"name\":\"테스트 기업\",\"companySize\":\"NOT_A_SIZE\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     }
@@ -74,7 +79,7 @@ class CompanyControllerTest {
     void malformedJsonReturnsInvalidRequest() throws Exception {
         mockMvc.perform(post("/api/companies")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"테스트 기업\",\"status\":"))
+                        .content("{\"name\":\"테스트 기업\",\"summary\":"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     }

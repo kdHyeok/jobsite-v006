@@ -4,13 +4,14 @@ import { fetchMe, logout } from './api/auth'
 import AdminView from './components/AdminView.vue'
 import CompanyWorkspace from './components/CompanyWorkspace.vue'
 import LoginView from './components/LoginView.vue'
+import PostingBoard from './components/PostingBoard.vue'
 import UserMenu from './components/UserMenu.vue'
 import { ROUTES } from './routes'
 import type { Me } from './types/auth'
 
 const ANONYMOUS: Me = { authenticated: false, id: null, email: null, displayName: null, role: null }
 
-// 라우트가 두 개(ROUTES)뿐이라 라우터 라이브러리를 두지 않았다.
+// 라우트가 몇 개(ROUTES)뿐이라 라우터 라이브러리를 두지 않았다.
 // nginx가 모든 경로에 index.html을 돌려주므로 pathname만 보면 된다.
 const path = ref(window.location.pathname)
 const me = ref<Me>(ANONYMOUS)
@@ -19,6 +20,7 @@ const bootError = ref('')
 
 const isAdmin = computed(() => me.value.role === 'ADMIN')
 const onAdminRoute = computed(() => path.value.startsWith(ROUTES.admin))
+const onPostingsRoute = computed(() => path.value.startsWith(ROUTES.postings))
 
 function syncPath() {
   path.value = window.location.pathname
@@ -75,22 +77,30 @@ onUnmounted(() => {
       </div>
       <div class="topbar-actions">
         <template v-if="me.authenticated">
-          <button
-            v-if="isAdmin && !onAdminRoute"
-            type="button"
-            class="button secondary"
-            @click="navigate(ROUTES.admin)"
-          >
-            관리자
-          </button>
-          <button
-            v-if="onAdminRoute"
-            type="button"
-            class="button secondary"
-            @click="navigate(ROUTES.home)"
-          >
-            워크스페이스
-          </button>
+          <nav class="nav-tabs" aria-label="주요 화면">
+            <button
+              type="button"
+              :class="{ active: !onAdminRoute && !onPostingsRoute }"
+              @click="navigate(ROUTES.home)"
+            >
+              기업
+            </button>
+            <button
+              type="button"
+              :class="{ active: onPostingsRoute }"
+              @click="navigate(ROUTES.postings)"
+            >
+              채용공고
+            </button>
+            <button
+              v-if="isAdmin"
+              type="button"
+              :class="{ active: onAdminRoute }"
+              @click="navigate(ROUTES.admin)"
+            >
+              관리자
+            </button>
+          </nav>
           <UserMenu :me="me" @updated="me = $event" @signed-out="signOut" />
         </template>
         <span v-else class="demo-badge">합성 데모 데이터</span>
@@ -126,6 +136,8 @@ onUnmounted(() => {
         </div>
       </main>
     </template>
+
+    <PostingBoard v-else-if="onPostingsRoute" />
 
     <CompanyWorkspace v-else />
   </div>

@@ -4,6 +4,7 @@ import type { Company, CompanyPayload } from '../types/company'
 
 export { ApiClientError } from './http'
 
+/** 목록에는 openPostings 가 비어 있다. 상세에서 채워진다. */
 export const listCompanies = () => request<Company[]>(API.companies)
 export const getCompany = (id: string) => request<Company>(API.company(id))
 export const createCompany = (payload: CompanyPayload) =>

@@ -5,9 +5,10 @@
 | 무엇 | 어디 |
 |---|---|
 | 모든 경로 상수 | `src/routes.ts` — `ROUTES`(SPA), `API`(백엔드), `GOOGLE_LOGIN_URL`. 다른 곳에 경로 리터럴을 쓰지 않는다 |
-| 셸·라우팅·세션 | `src/App.vue` — `pathname` 으로 `/` 와 `/admin` 분기. 라우터 라이브러리 없음 |
+| 셸·라우팅·세션 | `src/App.vue` — `pathname` 으로 `/`·`/postings`·`/admin` 분기. 라우터 라이브러리 없음 |
 | HTTP + CSRF | `src/api/http.ts` — `XSRF-TOKEN` 쿠키를 `X-XSRF-TOKEN` 헤더로 자동 첨부 |
-| 화면 | `components/LoginView.vue`(Google 버튼만), `CompanyWorkspace.vue`(CRUD), `AdminView.vue`(승인·권한·가입 토글) |
+| 화면 | `LoginView.vue`(Google 버튼만) · `CompanyWorkspace.vue`(기업 CRUD + 상세 채용정보) · `PostingBoard.vue`(공고 D-day 보드) · `AdminView.vue`(승인·권한·가입 토글) |
+| 도메인 계산 | `src/types/posting.ts` 의 D-day·마감 시각 변환. 컴포넌트에 흩뿌리지 않는다 — `docs/job-postings.md` |
 | 타입 | `src/types/*.ts` — 백엔드 DTO 와 1:1 |
 | 스타일 | `src/styles/main.css` 한 파일 |
 

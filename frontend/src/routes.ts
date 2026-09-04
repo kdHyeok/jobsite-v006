@@ -11,6 +11,7 @@
 /** SPA 라우트. App.vue 가 pathname 으로 분기한다. */
 export const ROUTES = {
   home: '/',
+  postings: '/postings',
   admin: '/admin',
 } as const
 
@@ -21,6 +22,10 @@ export const API = {
   logout: '/api/auth/logout',
   companies: '/api/companies',
   company: (id: string) => `/api/companies/${id}`,
+  postings: '/api/postings',
+  posting: (id: string) => `/api/postings/${id}`,
+  postingStage: (id: string) => `/api/postings/${id}/stage`,
+  postingArchive: (id: string) => `/api/postings/${id}/archive`,
   adminUsers: '/api/admin/users',
   adminUser: (id: string) => `/api/admin/users/${id}`,
   adminUserStatus: (id: string) => `/api/admin/users/${id}/status`,

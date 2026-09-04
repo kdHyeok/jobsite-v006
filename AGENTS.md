@@ -24,6 +24,7 @@ PostgreSQL + Spring Boot 4.1(Java 21) + Vue 3(TypeScript) + nginx, Docker Compos
 | 처음 실행, 환경 문제 | [docs/local-dev.md](docs/local-dev.md) |
 | `backend/**` | [docs/backend.md](docs/backend.md) — 버전 함정 포함 |
 | `frontend/src/**` | [docs/frontend.md](docs/frontend.md) |
+| 기업 정보·채용공고 도메인 | [docs/job-postings.md](docs/job-postings.md) |
 | `nginx.conf`, `compose*.yaml`, `.github/**`, 배포 | [docs/nginx-deploy.md](docs/nginx-deploy.md) |
 | "왜 이렇게 했지?" | [docs/decisions.md](docs/decisions.md) — 되돌리기 전에 반드시 읽는다 |
 | API 목록과 목적 | 관리자 로그인 후 `/swagger-ui/index.html`. 손으로 쓴 목록은 없다(썩는다). |

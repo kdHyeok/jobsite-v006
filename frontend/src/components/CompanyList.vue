@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Company } from '../types/company'
-import { statusLabels } from '../types/company'
+import { companySizeLabels } from '../types/company'
 
 defineProps<{
   companies: Company[]
@@ -32,9 +32,11 @@ const formatDate = (value: string) =>
     >
       <span class="company-row__top">
         <strong>{{ company.name }}</strong>
-        <span class="status-pill" :data-status="company.status">{{ statusLabels[company.status] }}</span>
+        <span v-if="company.companySize" class="status-pill">{{ companySizeLabels[company.companySize] }}</span>
       </span>
-      <span class="company-row__meta">{{ company.industry || '산업 미입력' }} · {{ company.location || '지역 미입력' }}</span>
+      <span class="company-row__meta">
+        {{ company.industries.length ? company.industries.join(' · ') : '업종 미입력' }}
+      </span>
       <span class="company-row__date">최근 수정 {{ formatDate(company.updatedAt) }}</span>
     </button>
   </section>
