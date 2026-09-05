@@ -65,37 +65,61 @@ describe('CompanyWorkspace', () => {
     vi.mocked(api.deleteCompany).mockReset().mockResolvedValue(undefined)
   })
 
-  it('기업 목록과 선택된 상세를 표시한다', async () => {
+  /** 카드에는 핵심만 — 매출액 같은 상세는 드로어를 열어야 나온다. */
+  it('목록 카드에는 이름과 업종만 보여준다', async () => {
     const wrapper = mount(CompanyWorkspace)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('루멘 로보틱스 데모')
-    expect(wrapper.text()).toContain('메모')
-    expect(wrapper.text()).toContain('1,200억 원')
-    expect(wrapper.text()).toContain('2015.03')
+    const card = wrapper.get('.card')
+    expect(card.text()).toContain('루멘 로보틱스 데모')
+    expect(card.text()).toContain('로봇')
+    expect(card.text()).not.toContain('1,200억 원')
+    expect(wrapper.find('.drawer').exists()).toBe(false)
+    expect(api.getCompany).not.toHaveBeenCalled()
   })
 
-  it('상세의 채용정보에 마감 전 공고를 보여준다', async () => {
+  it('카드를 누르면 드로어에 상세와 마감 전 공고가 뜬다', async () => {
     const wrapper = mount(CompanyWorkspace)
+    await flushPromises()
+
+    await wrapper.get('.card').trigger('click')
     await flushPromises()
 
     expect(api.getCompany).toHaveBeenCalledWith(company.id)
-    expect(wrapper.find('.posting-section .posting-card').exists()).toBe(true)
-    expect(wrapper.get('.posting-section').text()).toContain('백엔드 엔지니어')
+    const drawer = wrapper.get('.drawer')
+    expect(drawer.text()).toContain('1,200억 원')
+    expect(drawer.text()).toContain('2015.03')
+    expect(drawer.text()).toContain('백엔드 엔지니어')
+  })
+
+  it('드로어에서 수정을 누르면 같은 자리에서 폼으로 바뀐다', async () => {
+    const wrapper = mount(CompanyWorkspace)
+    await flushPromises()
+    await wrapper.get('.card').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('.drawer__foot .secondary').trigger('click')
+
+    expect(wrapper.find('#company-form').exists()).toBe(true)
+    expect(wrapper.findAll('.drawer')).toHaveLength(1)
+    expect(wrapper.get<HTMLInputElement>('#company-form input').element.value)
+      .toBe('루멘 로보틱스 데모')
   })
 
   it('확인 후 삭제 API를 호출한다', async () => {
     const wrapper = mount(CompanyWorkspace)
     await flushPromises()
+    await wrapper.get('.card').trigger('click')
+    await flushPromises()
 
-    await wrapper.get('.detail-actions .danger').trigger('click')
+    await wrapper.get('.drawer__foot .danger').trigger('click')
     await wrapper.get('.confirm-card .danger.solid').trigger('click')
     await flushPromises()
 
     expect(api.deleteCompany).toHaveBeenCalledWith(company.id)
   })
 
-  it('저장 성공 뒤 목록 갱신이 실패해도 form을 닫고 중복 호출하지 않는다', async () => {
+  it('저장 성공 뒤 목록 갱신이 실패해도 폼을 닫고 중복 호출하지 않는다', async () => {
     const created = { ...company, id: '10000000-0000-0000-0000-000000000099', name: '새 기업' }
     vi.mocked(api.listCompanies)
       .mockResolvedValueOnce([company])
@@ -104,12 +128,12 @@ describe('CompanyWorkspace', () => {
 
     const wrapper = mount(CompanyWorkspace)
     await flushPromises()
-    await wrapper.get('.hero .button.primary').trigger('click')
-    await wrapper.get('.modal-card input').setValue('새 기업')
-    await wrapper.get('.modal-card form').trigger('submit')
+    await wrapper.get('.page-head .button.primary').trigger('click')
+    await wrapper.get('#company-form input').setValue('새 기업')
+    await wrapper.get('#company-form').trigger('submit')
     await flushPromises()
 
-    expect(wrapper.find('.modal-card').exists()).toBe(false)
+    expect(wrapper.find('#company-form').exists()).toBe(false)
     expect(api.createCompany).toHaveBeenCalledTimes(1)
     expect(wrapper.text()).toContain('목록 갱신 실패')
   })

@@ -40,9 +40,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="workspace auth-workspace">
+  <main class="auth-page">
     <section class="auth-card">
-      <p class="eyebrow">JOBSIGHT ACCOUNT</p>
       <h1>로그인</h1>
       <p class="auth-lead">
         Google 계정으로 로그인합니다.

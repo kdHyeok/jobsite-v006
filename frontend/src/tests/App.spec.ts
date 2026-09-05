@@ -125,7 +125,7 @@ describe('App 접근 제어', () => {
     await flushPromises()
 
     expect(wrapper.find('.auth-card').exists()).toBe(false)
-    expect(wrapper.text()).toContain('지원할 기업을 한 화면에서 정리하세요.')
+    expect(wrapper.find('.segmented').text()).toContain('기업')
     // 아바타는 이름 첫 글자, 툴팁은 이메일
     const avatar = wrapper.get('.avatar')
     expect(avatar.text()).toBe('홍')
@@ -162,6 +162,22 @@ describe('App 접근 제어', () => {
     expect(wrapper.get('.avatar').text()).toBe('A')
   })
 
+  /** 관리자는 성격이 달라 기업/채용공고 세그먼트에 넣지 않는다 — docs/design-system.md 규칙 1. */
+  it('관리자 버튼은 세그먼트 밖에 있고 일반 계정에게는 보이지 않는다', async () => {
+    vi.mocked(auth.fetchMe).mockResolvedValue(admin)
+    const asAdmin = mount(App)
+    await flushPromises()
+
+    expect(asAdmin.find('.segmented').text()).not.toContain('관리자')
+    expect(asAdmin.find('.topbar-actions').text()).toContain('관리자')
+
+    vi.mocked(auth.fetchMe).mockResolvedValue(member)
+    const asMember = mount(App)
+    await flushPromises()
+
+    expect(asMember.find('.topbar-actions').text()).not.toContain('관리자')
+  })
+
   it('/postings 에서는 채용공고 보드를 보여준다', async () => {
     setPath(ROUTES.postings)
     vi.mocked(auth.fetchMe).mockResolvedValue(member)
@@ -169,8 +185,8 @@ describe('App 접근 제어', () => {
     const wrapper = mount(App)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('마감이 가까운 공고부터 처리하세요.')
-    expect(wrapper.find('.tab-bar').exists()).toBe(true)
+    expect(wrapper.find('.page-head').text()).toContain('채용공고')
+    expect(wrapper.find('.tabs').exists()).toBe(true)
   })
 
   /** 일반 계정에게는 관리자 링크도, /admin 화면도 주지 않는다. */
@@ -182,7 +198,7 @@ describe('App 접근 제어', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('관리자 권한이 필요합니다.')
-    expect(wrapper.find('.admin-table-wrap').exists()).toBe(false)
+    expect(wrapper.find('.table-wrap').exists()).toBe(false)
     expect(wrapper.find('.admin-panel').exists()).toBe(false)
   })
 
@@ -193,7 +209,7 @@ describe('App 접근 제어', () => {
     const wrapper = mount(App)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('계정과 권한을 관리하세요.')
+    expect(wrapper.find('.page-head').text()).toContain('관리자')
     expect(wrapper.find('.admin-panel').exists()).toBe(true)
   })
 

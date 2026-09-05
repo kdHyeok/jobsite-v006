@@ -68,53 +68,49 @@ onUnmounted(() => {
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand">
+      <button type="button" class="brand" @click="navigate(ROUTES.home)">
         <span class="brand-mark">J</span>
-        <div>
-          <strong>JobSight</strong>
-          <span>기업 정보 워크스페이스</span>
-        </div>
-      </div>
+        JobSight
+      </button>
+
+      <!-- 세그먼트에는 성격이 같은 두 화면만 둔다. 관리자는 오른쪽에 따로. -->
+      <nav v-if="me.authenticated" class="segmented" aria-label="화면 전환">
+        <button
+          type="button"
+          :class="{ active: !onAdminRoute && !onPostingsRoute }"
+          @click="navigate(ROUTES.home)"
+        >
+          기업
+        </button>
+        <button type="button" :class="{ active: onPostingsRoute }" @click="navigate(ROUTES.postings)">
+          채용공고
+        </button>
+      </nav>
+      <span v-else />
+
       <div class="topbar-actions">
         <template v-if="me.authenticated">
-          <nav class="nav-tabs" aria-label="주요 화면">
-            <button
-              type="button"
-              :class="{ active: !onAdminRoute && !onPostingsRoute }"
-              @click="navigate(ROUTES.home)"
-            >
-              기업
-            </button>
-            <button
-              type="button"
-              :class="{ active: onPostingsRoute }"
-              @click="navigate(ROUTES.postings)"
-            >
-              채용공고
-            </button>
-            <button
-              v-if="isAdmin"
-              type="button"
-              :class="{ active: onAdminRoute }"
-              @click="navigate(ROUTES.admin)"
-            >
-              관리자
-            </button>
-          </nav>
+          <button
+            v-if="isAdmin"
+            type="button"
+            class="button secondary compact"
+            @click="navigate(onAdminRoute ? ROUTES.home : ROUTES.admin)"
+          >
+            {{ onAdminRoute ? '워크스페이스' : '관리자' }}
+          </button>
           <UserMenu :me="me" @updated="me = $event" @signed-out="signOut" />
         </template>
-        <span v-else class="demo-badge">합성 데모 데이터</span>
       </div>
     </header>
 
-    <main v-if="booting" class="workspace">
+    <main v-if="booting" class="page">
       <div class="loading-card" aria-live="polite">
         <span class="spinner" /> 세션을 확인하는 중입니다.
       </div>
     </main>
 
     <template v-else-if="!me.authenticated">
-      <main v-if="bootError" class="workspace">
+      <main v-if="bootError" class="page">
         <div class="notice error" role="alert">
           <span>{{ bootError }}</span>
           <button type="button" @click="loadMe">다시 시도</button>
@@ -125,9 +121,8 @@ onUnmounted(() => {
 
     <template v-else-if="onAdminRoute">
       <AdminView v-if="isAdmin" :me="me" />
-      <main v-else class="workspace">
-        <div class="empty-state detail-empty">
-          <span class="empty-icon">⛔</span>
+      <main v-else class="page">
+        <div class="empty-state">
           <strong>관리자 권한이 필요합니다.</strong>
           <p>이 페이지는 관리자 계정만 열 수 있습니다.</p>
           <button type="button" class="button primary" @click="navigate(ROUTES.home)">

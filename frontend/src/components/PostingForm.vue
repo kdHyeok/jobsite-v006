@@ -83,17 +83,9 @@ const stages = Object.entries(stageLabels) as Array<[ApplicationStage, string]>
 </script>
 
 <template>
-  <div class="modal-backdrop" @mousedown.self="emit('cancel')">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="posting ? '채용공고 수정' : '채용공고 추가'">
-      <div class="modal-head">
-        <div>
-          <p class="eyebrow">{{ posting ? '공고 업데이트' : '새 공고 기록' }}</p>
-          <h2>{{ posting ? '채용공고 수정' : '채용공고 추가' }}</h2>
-        </div>
-        <button type="button" class="icon-button" aria-label="닫기" @click="emit('cancel')">×</button>
-      </div>
-      <form @submit.prevent="submit">
-        <div class="form-grid">
+  <!-- 껍데기는 Drawer 가 가진다. 저장 버튼도 드로어 하단에서 form="posting-form" 으로 제출한다. -->
+  <form id="posting-form" @submit.prevent="submit">
+    <div class="form-grid">
           <label class="field">
             <span>고용회사 <small>등록된 기업</small></span>
             <select v-model="form.companyId">
@@ -158,11 +150,5 @@ const stages = Object.entries(stageLabels) as Array<[ApplicationStage, string]>
             <textarea v-model="form.requiredSkills" rows="3" placeholder="예: Java, Spring, RDB 설계 경험" />
           </label>
         </div>
-        <div class="modal-actions">
-          <button type="button" class="button secondary" :disabled="saving" @click="emit('cancel')">취소</button>
-          <button type="submit" class="button primary" :disabled="saving">{{ saving ? '저장 중…' : '저장' }}</button>
-        </div>
-      </form>
-    </section>
-  </div>
+  </form>
 </template>

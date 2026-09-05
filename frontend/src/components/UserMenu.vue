@@ -68,7 +68,7 @@ onUnmounted(() => {
     <section v-if="open" class="popover" role="dialog" aria-label="내 계정">
       <div class="popover__head">
         <strong>{{ me.displayName || '이름 없음' }}</strong>
-        <span v-if="me.role" class="self-tag">{{ roleLabels[me.role] }}</span>
+        <span v-if="me.role" class="chip">{{ roleLabels[me.role] }}</span>
       </div>
       <p class="popover__email">{{ me.email }}</p>
 

@@ -11,33 +11,35 @@ const emit = defineEmits<{
   select: [company: Company]
 }>()
 
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value))
+/** 카드에는 업종을 두 개까지만. 나머지는 개수로 접는다 — docs/design-system.md 규칙 3. */
+const VISIBLE_INDUSTRIES = 2
 </script>
 
 <template>
-  <section class="company-list-panel" aria-label="기업 목록">
-    <div v-if="companies.length === 0" class="empty-state compact">
-      <strong>등록된 기업이 없습니다.</strong>
-      <span>오른쪽 위 ‘기업 추가’로 첫 기업을 정리해 보세요.</span>
-    </div>
+  <section class="card-grid" aria-label="기업 목록">
     <button
       v-for="company in companies"
       :key="company.id"
       type="button"
-      class="company-row"
-      :class="{ active: selectedId === company.id }"
-      :aria-pressed="selectedId === company.id"
+      class="card"
+      :class="{ selected: selectedId === company.id }"
       @click="emit('select', company)"
     >
-      <span class="company-row__top">
-        <strong>{{ company.name }}</strong>
-        <span v-if="company.companySize" class="status-pill">{{ companySizeLabels[company.companySize] }}</span>
+      <span class="card__top">
+        <span class="card__title">{{ company.name }}</span>
+        <span v-if="company.companySize" class="chip" data-tone="primary">
+          {{ companySizeLabels[company.companySize] }}
+        </span>
       </span>
-      <span class="company-row__meta">
-        {{ company.industries.length ? company.industries.join(' · ') : '업종 미입력' }}
+      <span v-if="company.industries.length" class="card__chips">
+        <span v-for="industry in company.industries.slice(0, VISIBLE_INDUSTRIES)" :key="industry" class="chip">
+          {{ industry }}
+        </span>
+        <span v-if="company.industries.length > VISIBLE_INDUSTRIES" class="chip">
+          +{{ company.industries.length - VISIBLE_INDUSTRIES }}
+        </span>
       </span>
-      <span class="company-row__date">최근 수정 {{ formatDate(company.updatedAt) }}</span>
+      <span v-else class="card__sub">업종 미입력</span>
     </button>
   </section>
 </template>

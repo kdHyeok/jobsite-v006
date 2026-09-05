@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { listCompanies } from '../api/companies'
 import {
   ApiClientError,
@@ -12,11 +12,15 @@ import {
   updatePosting,
 } from '../api/postings'
 import ConfirmDialog from './ConfirmDialog.vue'
+import Drawer from './Drawer.vue'
 import PostingCard from './PostingCard.vue'
+import PostingDetail from './PostingDetail.vue'
 import PostingForm from './PostingForm.vue'
 import type { Company } from '../types/company'
 import type { ApplicationStage, JobPosting, JobPostingPayload } from '../types/posting'
-import { daysUntil, stageLabels } from '../types/posting'
+
+/** 드로어 하나가 보기·수정·추가를 모두 맡는다 — docs/design-system.md 규칙 4. */
+type Mode = 'view' | 'edit' | 'create'
 
 const tab = ref<'open' | 'archived'>('open')
 const postings = ref<JobPosting[]>([])
@@ -24,26 +28,24 @@ const companies = ref<Company[]>([])
 const loading = ref(true)
 const loadError = ref('')
 const notice = ref('')
-const formOpen = ref(false)
-const editing = ref<JobPosting | null>(null)
+
+const mode = ref<Mode | null>(null)
+const selected = ref<JobPosting | null>(null)
 const saving = ref(false)
 const formErrors = ref<Record<string, string>>({})
 const deleteTarget = ref<JobPosting | null>(null)
 const deleting = ref(false)
 
 /** 서버가 마감 임박 순으로 내려준다. 여기서 다시 정렬하면 두 곳이 어긋난다. */
-const urgentCount = computed(() =>
-  postings.value.filter((posting) => {
-    const days = daysUntil(posting.deadlineAt)
-    return days !== null && days >= 0 && days <= 7
-  }).length,
-)
-
 async function load() {
   loading.value = true
   loadError.value = ''
   try {
     postings.value = tab.value === 'open' ? await listPostings() : await listArchivedPostings()
+    // 열려 있는 드로어의 내용도 새 목록에 맞춘다.
+    if (selected.value) {
+      selected.value = postings.value.find((posting) => posting.id === selected.value?.id) ?? selected.value
+    }
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '채용공고를 불러오지 못했습니다.'
   } finally {
@@ -51,29 +53,40 @@ async function load() {
   }
 }
 
-function openCreate() {
-  editing.value = null
-  formErrors.value = {}
-  formOpen.value = true
+function open(posting: JobPosting) {
+  selected.value = posting
+  mode.value = 'view'
 }
 
-function openEdit(posting: JobPosting) {
-  editing.value = posting
+function openCreate() {
+  selected.value = null
   formErrors.value = {}
-  formOpen.value = true
+  mode.value = 'create'
+}
+
+function startEdit() {
+  formErrors.value = {}
+  mode.value = 'edit'
+}
+
+function close() {
+  mode.value = null
+  selected.value = null
 }
 
 async function save(payload: JobPostingPayload) {
   saving.value = true
   formErrors.value = {}
   notice.value = ''
+  const editingId = mode.value === 'edit' ? selected.value?.id ?? null : null
   try {
-    const wasEditing = editing.value !== null
-    if (editing.value) await updatePosting(editing.value.id, payload)
-    else await createPosting(payload)
-    formOpen.value = false
+    const saved = editingId
+      ? await updatePosting(editingId, payload)
+      : await createPosting(payload)
+    selected.value = saved
+    mode.value = 'view'
     await load()
-    notice.value = wasEditing ? '채용공고를 수정했습니다.' : '채용공고를 추가했습니다.'
+    notice.value = editingId ? '채용공고를 수정했습니다.' : '채용공고를 추가했습니다.'
   } catch (error) {
     if (error instanceof ApiClientError) {
       formErrors.value = error.fieldErrors
@@ -86,22 +99,26 @@ async function save(payload: JobPostingPayload) {
   }
 }
 
-async function changeStage(posting: JobPosting, stage: ApplicationStage) {
+async function changeStage(stage: ApplicationStage) {
+  if (!selected.value) return
   notice.value = ''
   try {
-    await changePostingStage(posting.id, stage)
+    selected.value = await changePostingStage(selected.value.id, stage)
     await load()
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '지원단계를 바꾸지 못했습니다.'
   }
 }
 
-async function toggleArchive(posting: JobPosting) {
+async function toggleArchive() {
+  if (!selected.value) return
+  const wasArchived = selected.value.archived
   notice.value = ''
   try {
-    await setPostingArchived(posting.id, !posting.archived)
+    await setPostingArchived(selected.value.id, !wasArchived)
+    close()
     await load()
-    notice.value = posting.archived ? '공고를 다시 꺼냈습니다.' : '공고를 보관함으로 옮겼습니다.'
+    notice.value = wasArchived ? '공고를 다시 꺼냈습니다.' : '공고를 보관함으로 옮겼습니다.'
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '보관 상태를 바꾸지 못했습니다.'
   }
@@ -114,6 +131,7 @@ async function remove() {
   try {
     await deletePosting(deleteTarget.value.id)
     deleteTarget.value = null
+    close()
     await load()
     notice.value = '채용공고를 삭제했습니다.'
   } catch (error) {
@@ -123,7 +141,10 @@ async function remove() {
   }
 }
 
-watch(tab, load)
+watch(tab, () => {
+  close()
+  load()
+})
 
 onMounted(async () => {
   await load()
@@ -137,39 +158,20 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="workspace">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">JOB POSTINGS · D-DAY</p>
-        <h1>마감이 가까운 공고부터 처리하세요.</h1>
-        <p>마감이 지난 ‘관심’ 공고는 목록을 열 때 보관함으로 자동 이동합니다.</p>
+  <main class="page">
+    <div class="page-head">
+      <div class="page-title">
+        <h1>채용공고</h1>
+        <span class="page-count">{{ postings.length }}</span>
       </div>
-      <div class="hero-aside">
-        <div class="metric-card">
-          <strong>{{ urgentCount }}</strong>
-          <span>7일 내 마감</span>
-        </div>
-        <button type="button" class="button primary" @click="openCreate">+ 공고 추가</button>
-      </div>
-    </section>
+      <button type="button" class="button primary" @click="openCreate">공고 추가</button>
+    </div>
 
-    <div class="tab-bar" role="tablist" aria-label="공고 보기">
-      <button
-        type="button"
-        role="tab"
-        :aria-selected="tab === 'open'"
-        :class="{ active: tab === 'open' }"
-        @click="tab = 'open'"
-      >
+    <div class="tabs" role="tablist" aria-label="공고 보기">
+      <button type="button" role="tab" :aria-selected="tab === 'open'" :class="{ active: tab === 'open' }" @click="tab = 'open'">
         진행 중
       </button>
-      <button
-        type="button"
-        role="tab"
-        :aria-selected="tab === 'archived'"
-        :class="{ active: tab === 'archived' }"
-        @click="tab = 'archived'"
-      >
+      <button type="button" role="tab" :aria-selected="tab === 'archived'" :class="{ active: tab === 'archived' }" @click="tab = 'archived'">
         보관함
       </button>
     </div>
@@ -181,47 +183,70 @@ onMounted(async () => {
     </div>
 
     <section v-if="loading" class="loading-card" aria-live="polite">
-      <span class="spinner" /> 채용공고를 불러오는 중입니다.
+      <span class="spinner" /> 불러오는 중입니다.
     </section>
 
-    <section v-else-if="postings.length === 0" class="empty-state detail-empty">
-      <span class="empty-icon">🗂</span>
+    <section v-else-if="postings.length === 0" class="empty-state">
       <strong>{{ tab === 'open' ? '진행 중인 공고가 없습니다.' : '보관된 공고가 없습니다.' }}</strong>
-      <p>공고를 추가하면 마감 임박 순으로 정렬됩니다.</p>
+      <p>마감이 지난 ‘관심’ 공고는 목록을 열 때 보관함으로 자동 이동합니다.</p>
       <button v-if="tab === 'open'" type="button" class="button primary" @click="openCreate">첫 공고 추가</button>
     </section>
 
-    <section v-else class="posting-grid">
-      <PostingCard v-for="posting in postings" :key="posting.id" :posting="posting">
-        <template #actions>
-          <label class="stage-select">
-            <span class="sr-only">지원단계</span>
-            <select
-              :value="posting.stage"
-              @change="changeStage(posting, ($event.target as HTMLSelectElement).value as ApplicationStage)"
-            >
-              <option v-for="(label, value) in stageLabels" :key="value" :value="value">{{ label }}</option>
-            </select>
-          </label>
-          <button type="button" class="button secondary compact" @click="openEdit(posting)">수정</button>
-          <button type="button" class="button secondary compact" @click="toggleArchive(posting)">
-            {{ posting.archived ? '되돌리기' : '보관' }}
-          </button>
-          <button type="button" class="button danger compact" @click="deleteTarget = posting">삭제</button>
-        </template>
-      </PostingCard>
+    <section v-else class="card-grid">
+      <PostingCard
+        v-for="posting in postings"
+        :key="posting.id"
+        :posting="posting"
+        :selected="selected?.id === posting.id"
+        @select="open(posting)"
+      />
     </section>
   </main>
 
-  <PostingForm
-    v-if="formOpen"
-    :posting="editing"
-    :companies="companies"
-    :saving="saving"
-    :api-field-errors="formErrors"
-    @submit="save"
-    @cancel="formOpen = false"
-  />
+  <Drawer
+    v-if="mode === 'view' && selected"
+    :title="selected.position"
+    :subtitle="selected.companyName ?? '회사 미입력'"
+    @close="close"
+  >
+    <PostingDetail :posting="selected" @change-stage="changeStage" />
+    <template #actions>
+      <button type="button" class="button danger" @click="deleteTarget = selected">삭제</button>
+      <button type="button" class="button secondary" @click="toggleArchive">
+        {{ selected.archived ? '되돌리기' : '보관' }}
+      </button>
+      <button type="button" class="button secondary" @click="startEdit">수정</button>
+    </template>
+  </Drawer>
+
+  <Drawer
+    v-else-if="mode === 'edit' || mode === 'create'"
+    :title="mode === 'edit' ? '채용공고 수정' : '채용공고 추가'"
+    :subtitle="mode === 'edit' ? selected?.position : undefined"
+    @close="mode === 'edit' ? (mode = 'view') : close()"
+  >
+    <PostingForm
+      :posting="mode === 'edit' ? selected : null"
+      :companies="companies"
+      :saving="saving"
+      :api-field-errors="formErrors"
+      @submit="save"
+    />
+    <template #actions>
+      <button
+        type="button"
+        class="button secondary"
+        :disabled="saving"
+        @click="mode === 'edit' ? (mode = 'view') : close()"
+      >
+        취소
+      </button>
+      <button type="submit" form="posting-form" class="button primary" :disabled="saving">
+        {{ saving ? '저장 중…' : '저장' }}
+      </button>
+    </template>
+  </Drawer>
+
   <ConfirmDialog
     v-if="deleteTarget"
     title="채용공고를 삭제할까요?"

@@ -32,6 +32,11 @@ const nameDraft = ref('')
 const deleteTarget = ref<AdminUser | null>(null)
 const deleting = ref(false)
 
+/** 상태 칩 색. PENDING 은 주의, ACTIVE 는 긍정. */
+const statusTone: Record<UserStatus, string> = {
+  PENDING: 'warning', ACTIVE: 'positive', SUSPENDED: 'negative', REJECTED: 'neutral',
+}
+
 const pendingCount = computed(() => users.value.filter((user) => user.status === 'PENDING').length)
 
 function report(error: unknown, fallback: string) {
@@ -153,18 +158,13 @@ onMounted(load)
 </script>
 
 <template>
-  <main class="workspace">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">ADMIN CONSOLE</p>
-        <h1>계정과 권한을 관리하세요.</h1>
-        <p>가입 승인, 계정 상태·권한·이름 변경, 계정 삭제, 신규 가입 자동 승인 여부를 이 화면에서 처리합니다.</p>
+  <main class="page">
+    <div class="page-head">
+      <div class="page-title">
+        <h1>관리자</h1>
+        <span class="page-count">승인 대기 {{ pendingCount }}</span>
       </div>
-      <div class="metric-card">
-        <strong>{{ pendingCount }}</strong>
-        <span>승인 대기</span>
-      </div>
-    </section>
+    </div>
 
     <div v-if="notice" class="notice success" role="status">{{ notice }}</div>
     <div v-if="errorMessage" class="notice error" role="alert">
@@ -196,8 +196,8 @@ onMounted(load)
       <span class="spinner" /> 계정 목록을 불러오는 중입니다.
     </section>
 
-    <section v-else class="admin-table-wrap">
-      <table class="admin-table">
+    <section v-else class="table-wrap">
+      <table class="data-table">
         <thead>
           <tr>
             <th>이메일</th>
@@ -206,14 +206,14 @@ onMounted(load)
             <th>권한</th>
             <th>상태</th>
             <th>신청일</th>
-            <th class="admin-table__actions">처리</th>
+            <th class="data-table__actions">처리</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="user in users" :key="user.id">
             <td>
               <strong>{{ user.email }}</strong>
-              <span v-if="user.id === props.me.id" class="self-tag">본인</span>
+              <span v-if="user.id === props.me.id" class="chip">본인</span>
             </td>
             <td>
               <form v-if="editingId === user.id" class="inline-edit" @submit.prevent="saveName(user)">
@@ -232,7 +232,7 @@ onMounted(load)
               </button>
             </td>
             <td>
-              <span class="self-tag" :class="{ warn: !user.googleLinked }">
+              <span class="chip" :data-tone="user.googleLinked ? 'primary' : 'warning'">
                 {{ user.googleLinked ? 'Google' : '없음' }}
               </span>
             </td>
@@ -247,12 +247,12 @@ onMounted(load)
               </select>
             </td>
             <td>
-              <span class="status-pill" :data-user-status="user.status">
+              <span class="chip" :data-tone="statusTone[user.status]">
                 {{ userStatusLabels[user.status] }}
               </span>
             </td>
-            <td class="admin-table__date">{{ formatDate(user.createdAt) }}</td>
-            <td class="admin-table__actions">
+            <td class="data-table__date">{{ formatDate(user.createdAt) }}</td>
+            <td class="data-table__actions">
               <span v-if="user.id === props.me.id" class="muted-note">
                 본인 계정은 아바타 메뉴에서 수정합니다
               </span>
@@ -296,7 +296,7 @@ onMounted(load)
             </td>
           </tr>
           <tr v-if="users.length === 0">
-            <td colspan="7" class="admin-table__empty">계정이 없습니다.</td>
+            <td colspan="7" class="data-table__empty">계정이 없습니다.</td>
           </tr>
         </tbody>
       </table>
