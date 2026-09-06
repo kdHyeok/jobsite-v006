@@ -2,7 +2,7 @@
 # 배포·설정 변경 뒤 반드시 통과해야 하는 최소 검증.
 #
 #   bash scripts/smoke.sh                 # .env 의 PUBLIC_BASE_URL 사용
-#   bash scripts/smoke.sh https://x.ts.net:8443
+#   bash scripts/smoke.sh https://job.donhse.duckdns.org
 #
 # 이 스크립트가 잡는 것은 이 프로젝트에서 실제로 반복됐던 실패들이다:
 #   - nginx 가 포트 없는 절대 URL 로 리다이렉트 (redirect_uri_mismatch, /admin 302)

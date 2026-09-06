@@ -6,7 +6,7 @@
 
 Google 계정으로 로그인하는 기업 정보 CRUD. 계정별 데이터 분리, 관리자 승인제(자동 승인 토글 있음).
 PostgreSQL + Spring Boot 4.1(Java 21) + Vue 3(TypeScript) + nginx, Docker Compose 3 컨테이너.
-로컬 `http://127.0.0.1:8088`, 배포는 tailnet 전용.
+로컬 `http://127.0.0.1:8088`, 배포는 `https://job.donhse.duckdns.org`(호스트 리버스 프록시).
 
 ## 작업 순서 — 문서가 먼저다
 

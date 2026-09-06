@@ -80,3 +80,13 @@ FK `ON DELETE CASCADE`. 소유자 없는 기업 행을 남기면 소유자 격�
 
 ## 채용 절차 결과를 예정·완료로 단순화 (V13)
 사용자 요청. 지원 결과는 공고의 내 상태에서 이미 관리하므로 절차 노드의 진행 중·통과·탈락 네 상태는 중복이었다. 노드는 일정 체크 용도로 예정(`UPCOMING`)·완료(`PASSED`)만 둔다. 기존 `IN_PROGRESS`는 예정, `FAILED`는 절차가 수행된 기록이므로 완료로 이관한다.
+
+## 배포는 공용 리버스 프록시 + duckdns 도메인 (tailnet 폐기)
+처음엔 `tailscale serve --https=8443` 로 tailnet 안에만 열었다. 폐기는 사용자 결정이다.
+
+지금은 호스트의 별도 프록시 스택(`/home/quincy/HDD/apps/reverse-proxy`, `conf.d/40-job.conf`)이 `https://job.donhse.duckdns.org` 를 TLS 종단하고, `jobsite-v006_app` 네트워크로 `jobsite-v006-frontend-1:80` 에 컨테이너명으로 직접 붙는다. jobsite 는 tailnet 에 올리지 않는다.
+
+되돌리면서 생긴 대가:
+- `PUBLIC_BASE_URL=https://job.donhse.duckdns.org`, `SESSION_COOKIE_SECURE=true`. 앱은 base URL 을 하나만 갖기 때문에 `http://127.0.0.1:8088` 로는 로그인할 수 없다 — 로컬 8088 은 미인증 스모크·디버깅 경로로만 남는다.
+- 프록시가 `ports:` 매핑을 경유하지 않으므로 **이 저장소에서 컨테이너를 재생성하면 그 순간 공개 도메인에 반영된다.** "로컬에서 먼저 확인하고 나중에 노출" 이 성립하지 않는다.
+- 서비스가 공개 인터넷에 노출된다. 접근 제한은 Google OIDC 와 관리자 승인제뿐이다. 동의 화면이 Testing 이면 등록된 테스트 사용자만 로그인된다(「인증은 Google OIDC 하나」 참고).
