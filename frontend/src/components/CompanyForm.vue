@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
-import type { Company, CompanyPayload, CompanySize } from '../types/company'
+import { computed, reactive, watch } from 'vue'
+import type { Company, CompanyPayload, CompanySize, RevenueUnit } from '../types/company'
 import { companySizeLabels } from '../types/company'
+import TagInput from './TagInput.vue'
 
 const props = defineProps<{
   company: Company | null
   saving: boolean
   apiFieldErrors: Record<string, string>
+  industryOptions: string[]
 }>()
 
 const emit = defineEmits<{
@@ -14,21 +16,24 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-/** 업종은 쉼표로 나눠 받는다. 칩 에디터를 따로 만들 만큼 자주 쓰이지 않는다. */
-type FormState = Omit<CompanyPayload, 'industries' | 'annualRevenue' | 'employeeCount'> & {
-  industriesText: string
+type FormState = Omit<CompanyPayload, 'annualRevenue' | 'employeeCount' | 'revenueUnit'> & {
+  revenueUnit: RevenueUnit
   annualRevenueText: string
   employeeCountText: string
 }
 
 const emptyForm = (): FormState => ({
-  name: '', websiteUrl: '', industriesText: '', companySize: null,
+  name: '', websiteUrl: '', industries: [], companySize: null,
+  revenueUnit: 'TEN_THOUSAND',
   annualRevenueText: '', employeeCountText: '', address: '',
-  foundedOn: '', summary: '', memo: '',
+  foundedOn: '', summary: '', benefits: '', memo: '',
 })
 
 const form = reactive<FormState>(emptyForm())
 const localErrors = reactive<Record<string, string>>({})
+const revenueUnitOf = (company: Company): RevenueUnit =>
+  company.revenueUnit ?? (company.annualRevenue !== null && company.annualRevenue >= 100_000_000 ? 'HUNDRED_MILLION' : 'TEN_THOUSAND')
+const revenueDivisor = (unit: RevenueUnit) => unit === 'HUNDRED_MILLION' ? 100_000_000 : 10_000
 
 watch(
   () => props.company,
@@ -37,14 +42,16 @@ watch(
       ? {
           name: company.name,
           websiteUrl: company.websiteUrl ?? '',
-          industriesText: company.industries.join(', '),
+          industries: [...company.industries],
           companySize: company.companySize,
-          annualRevenueText: company.annualRevenue === null ? '' : String(company.annualRevenue),
+          revenueUnit: revenueUnitOf(company),
+          annualRevenueText: company.annualRevenue === null ? '' : String(company.annualRevenue / revenueDivisor(revenueUnitOf(company))),
           employeeCountText: company.employeeCount === null ? '' : String(company.employeeCount),
           address: company.address ?? '',
           // input[type=month] 는 YYYY-MM 만 받는다. 저장은 그 달 1일로 한다.
           foundedOn: company.foundedOn ? company.foundedOn.slice(0, 7) : '',
           summary: company.summary ?? '',
+          benefits: company.benefits ?? '',
           memo: company.memo ?? '',
         }
       : emptyForm())
@@ -54,8 +61,9 @@ watch(
 )
 
 const fieldError = (name: string) => localErrors[name] ?? props.apiFieldErrors[name]
+const firstError = computed(() => Object.values(localErrors)[0] ?? Object.values(props.apiFieldErrors)[0] ?? '')
 
-const parseNumber = (text: string) => (text.trim() === '' ? null : Number(text))
+const parseNumber = (value: string | number) => (String(value).trim() === '' ? null : Number(value))
 
 function validate() {
   Object.keys(localErrors).forEach((key) => delete localErrors[key])
@@ -65,8 +73,11 @@ function validate() {
     localErrors.websiteUrl = 'http 또는 https URL을 입력해 주세요.'
   }
   const revenue = parseNumber(form.annualRevenueText)
-  if (revenue !== null && (!Number.isFinite(revenue) || revenue < 0)) {
-    localErrors.annualRevenue = '0 이상 숫자를 입력해 주세요.'
+  if (revenue !== null) {
+    const revenueWon = Math.round(revenue * revenueDivisor(form.revenueUnit))
+    if (!Number.isFinite(revenueWon) || revenueWon < 0 || !Number.isSafeInteger(revenueWon)) {
+      localErrors.annualRevenue = '0 이상 숫자를 입력해 주세요.'
+    }
   }
   const employees = parseNumber(form.employeeCountText)
   if (employees !== null && (!Number.isInteger(employees) || employees < 0)) {
@@ -77,29 +88,32 @@ function validate() {
 
 function submit() {
   if (!validate()) return
-  const industries = [...new Set(
-    form.industriesText.split(',').map((value) => value.trim()).filter(Boolean),
-  )]
+  const revenue = parseNumber(form.annualRevenueText)
+  const annualRevenue = revenue === null ? null : Math.round(revenue * revenueDivisor(form.revenueUnit))
   emit('submit', {
     name: form.name.trim(),
     websiteUrl: form.websiteUrl.trim(),
-    industries,
+    industries: form.industries,
     companySize: form.companySize,
-    annualRevenue: parseNumber(form.annualRevenueText),
+    annualRevenue,
+    revenueUnit: annualRevenue === null ? null : form.revenueUnit,
     employeeCount: parseNumber(form.employeeCountText),
     address: form.address.trim(),
     foundedOn: form.foundedOn ? `${form.foundedOn}-01` : null,
     summary: form.summary,
+    benefits: form.benefits,
     memo: form.memo,
   })
 }
 
 const sizes = Object.entries(companySizeLabels) as Array<[CompanySize, string]>
+const revenueUnits: Array<[RevenueUnit, string]> = [['TEN_THOUSAND', '만 원'], ['HUNDRED_MILLION', '억 원']]
 </script>
 
 <template>
   <!-- 껍데기는 Drawer 가 가진다. 저장 버튼도 드로어 하단에서 form="company-form" 으로 제출한다. -->
   <form id="company-form" @submit.prevent="submit">
+    <div v-if="firstError" class="notice error form-error-summary" role="alert">{{ firstError }}</div>
     <div class="form-grid">
       <label class="field full">
         <span>기업명 <b>*</b></span>
@@ -117,21 +131,11 @@ const sizes = Object.entries(companySizeLabels) as Array<[CompanySize, string]>
       </label>
 
       <p class="form-section">기업 정보</p>
-      <label class="field full">
-        <span>업종 <small>쉼표로 여러 개</small></span>
-        <input v-model="form.industriesText" list="industry-suggestions" placeholder="예: IT서비스, 금융권, SI" />
-        <datalist id="industry-suggestions">
-          <option value="IT서비스" />
-          <option value="SI" />
-          <option value="금융권" />
-          <option value="게임" />
-          <option value="이커머스" />
-          <option value="제조" />
-          <option value="바이오·헬스케어" />
-          <option value="교육" />
-        </datalist>
+      <div class="field full">
+        <span>업종 <small>기존 태그 선택 또는 Enter로 추가</small></span>
+        <TagInput v-model="form.industries" :suggestions="industryOptions" placeholder="예: IT서비스" :max="10" />
         <small v-if="fieldError('industries')" class="field-error">{{ fieldError('industries') }}</small>
-      </label>
+      </div>
       <label class="field">
         <span>기업 형태</span>
         <select v-model="form.companySize">
@@ -144,8 +148,12 @@ const sizes = Object.entries(companySizeLabels) as Array<[CompanySize, string]>
         <input v-model="form.foundedOn" type="month" />
       </label>
       <label class="field">
-        <span>매출액 <small>원</small></span>
-        <input v-model="form.annualRevenueText" type="number" min="0" step="1" placeholder="120000000000" />
+        <span class="field-label-with-tools">매출액
+          <span class="unit-toggle" role="group" aria-label="매출액 단위">
+            <button v-for="[value, label] in revenueUnits" :key="value" type="button" :class="{ active: form.revenueUnit === value }" @click="form.revenueUnit = value">{{ label }}</button>
+          </span>
+        </span>
+        <input v-model="form.annualRevenueText" type="number" min="0" :step="form.revenueUnit === 'HUNDRED_MILLION' ? 0.1 : 1" :placeholder="form.revenueUnit === 'HUNDRED_MILLION' ? '예: 1.2' : '예: 12000'" />
         <small v-if="fieldError('annualRevenue')" class="field-error">{{ fieldError('annualRevenue') }}</small>
       </label>
       <label class="field">
@@ -157,6 +165,12 @@ const sizes = Object.entries(companySizeLabels) as Array<[CompanySize, string]>
         <span>주소</span>
         <input v-model="form.address" maxlength="200" placeholder="예: 경기 성남시 분당구 …" />
         <small v-if="fieldError('address')" class="field-error">{{ fieldError('address') }}</small>
+      </label>
+
+      <label class="field full">
+        <span>기업 복지</span>
+        <textarea v-model="form.benefits" maxlength="5000" rows="4" placeholder="복지 제도, 근무 환경, 지원 항목" />
+        <small v-if="fieldError('benefits')" class="field-error">{{ fieldError('benefits') }}</small>
       </label>
 
       <p class="form-section">개인 기록</p>

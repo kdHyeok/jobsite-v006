@@ -49,6 +49,11 @@ public class Company {
     @Column(name = "annual_revenue")
     private Long annualRevenue;
 
+    /** annualRevenue 는 원 단위 정본, 이 값은 사용자가 고른 입력·표시 단위다. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "revenue_unit", length = 20)
+    private RevenueUnit revenueUnit;
+
     @Column(name = "employee_count")
     private Integer employeeCount;
 
@@ -61,6 +66,9 @@ public class Company {
 
     @Column(columnDefinition = "TEXT")
     private String summary;
+
+    @Column(columnDefinition = "TEXT")
+    private String benefits;
 
     @Column(columnDefinition = "TEXT")
     private String memo;
@@ -91,10 +99,12 @@ public class Company {
         this.industries = new LinkedHashSet<>(attributes.industries());
         this.companySize = attributes.companySize();
         this.annualRevenue = attributes.annualRevenue();
+        this.revenueUnit = attributes.annualRevenue() == null ? null : attributes.revenueUnit();
         this.employeeCount = attributes.employeeCount();
         this.address = attributes.address();
         this.foundedOn = attributes.foundedOn();
         this.summary = attributes.summary();
+        this.benefits = attributes.benefits();
         this.memo = attributes.memo();
     }
 
@@ -117,6 +127,14 @@ public class Company {
         updatedAt = Instant.now();
     }
 
+    /**
+     * 직접 입력한 회사명으로 기존 기업을 찾는 키. 공백 제거 + 소문자.
+     * V10 의 unique index companies_owner_name_key 와 같은 규칙이어야 한다.
+     */
+    public static String nameKey(String name) {
+        return name.replace(" ", "").toLowerCase(java.util.Locale.ROOT);
+    }
+
     public UUID getId() { return id; }
     public UUID getOwnerId() { return ownerId; }
     public String getName() { return name; }
@@ -124,10 +142,12 @@ public class Company {
     public Set<String> getIndustries() { return industries; }
     public CompanySize getCompanySize() { return companySize; }
     public Long getAnnualRevenue() { return annualRevenue; }
+    public RevenueUnit getRevenueUnit() { return revenueUnit; }
     public Integer getEmployeeCount() { return employeeCount; }
     public String getAddress() { return address; }
     public LocalDate getFoundedOn() { return foundedOn; }
     public String getSummary() { return summary; }
+    public String getBenefits() { return benefits; }
     public String getMemo() { return memo; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

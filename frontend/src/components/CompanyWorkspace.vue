@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
   ApiClientError,
   createCompany,
@@ -14,6 +14,12 @@ import CompanyList from './CompanyList.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import Drawer from './Drawer.vue'
 import type { Company, CompanyPayload } from '../types/company'
+
+/** 다른 화면이 열어 달라고 넘긴 기업. 목록에서만 찾는다(기업엔 보관 개념이 없다). */
+const props = withDefaults(defineProps<{ focus?: string | null }>(), { focus: null })
+
+/** 기업 상세의 채용정보를 더블클릭했을 때. 라우팅은 App 이 한다. */
+const emit = defineEmits<{ openPosting: [postingId: string] }>()
 
 /** 드로어 하나가 보기·수정·추가를 모두 맡는다 — docs/design-system.md 규칙 4. */
 type Mode = 'view' | 'edit' | 'create'
@@ -31,6 +37,7 @@ const saving = ref(false)
 const formErrors = ref<Record<string, string>>({})
 const deleteTarget = ref<Company | null>(null)
 const deleting = ref(false)
+const industryOptions = computed(() => [...new Set(companies.value.flatMap((company) => company.industries))].sort())
 
 async function load() {
   loading.value = true
@@ -114,7 +121,17 @@ async function remove() {
   }
 }
 
-onMounted(load)
+function applyFocus() {
+  const found = companies.value.find((company) => company.id === props.focus)
+  if (found) open(found)
+}
+
+watch(() => props.focus, applyFocus)
+
+onMounted(async () => {
+  await load()
+  applyFocus()
+})
 </script>
 
 <template>
@@ -157,11 +174,11 @@ onMounted(load)
     subtitle="기업 프로필"
     @close="close"
   >
-    <CompanyDetail :company="selected" />
     <template #actions>
-      <button type="button" class="button danger" @click="deleteTarget = selected">삭제</button>
-      <button type="button" class="button secondary" @click="startEdit">수정</button>
+      <button type="button" class="button secondary compact" @click="startEdit">수정</button>
+      <button type="button" class="button danger compact" @click="deleteTarget = selected">삭제</button>
     </template>
+    <CompanyDetail :company="selected" @open-posting="emit('openPosting', $event)" />
   </Drawer>
 
   <Drawer
@@ -170,25 +187,26 @@ onMounted(load)
     :subtitle="mode === 'edit' ? selected?.name : undefined"
     @close="mode === 'edit' ? (mode = 'view') : close()"
   >
-    <CompanyForm
-      :company="mode === 'edit' ? selected : null"
-      :saving="saving"
-      :api-field-errors="formErrors"
-      @submit="save"
-    />
     <template #actions>
       <button
         type="button"
-        class="button secondary"
+        class="button secondary compact"
         :disabled="saving"
         @click="mode === 'edit' ? (mode = 'view') : close()"
       >
         취소
       </button>
-      <button type="submit" form="company-form" class="button primary" :disabled="saving">
+      <button type="submit" form="company-form" class="button primary compact" :disabled="saving">
         {{ saving ? '저장 중…' : '저장' }}
       </button>
     </template>
+    <CompanyForm
+      :company="mode === 'edit' ? selected : null"
+      :saving="saving"
+      :api-field-errors="formErrors"
+      :industry-options="industryOptions"
+      @submit="save"
+    />
   </Drawer>
 
   <ConfirmDialog

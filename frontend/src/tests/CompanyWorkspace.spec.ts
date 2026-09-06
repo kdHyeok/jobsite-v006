@@ -19,20 +19,27 @@ vi.mock('../api/companies', async () => {
   }
 })
 
+vi.mock('../api/company-contents', () => ({
+  ApiClientError: class extends Error { fieldErrors = {} },
+  listCompanyContents: vi.fn(() => Promise.resolve([])),
+  createCompanyContent: vi.fn(),
+  updateCompanyContent: vi.fn(),
+  deleteCompanyContent: vi.fn(),
+}))
+
 const posting: JobPosting = {
   id: '30000000-0000-0000-0000-000000000001',
   companyId: '10000000-0000-0000-0000-000000000001',
   companyName: '루멘 로보틱스 데모',
-  position: '백엔드 엔지니어',
+  title: '백엔드 엔지니어',
   postingUrl: null,
   employmentType: 'FULL_TIME',
   deadlineAt: '2099-09-10T09:00:00Z',
-  stage: 'INTERESTED',
-  headcount: '0명',
-  workLocation: '성남',
+  status: 'INTERESTED',
   qualifications: null,
-  responsibilities: null,
-  requiredSkills: null,
+  targetPositionId: null,
+  steps: [],
+  positions: [{ id: '40000000-0000-0000-0000-000000000001', name: '백엔드 엔지니어', team: null, headcount: null, workLocation: null }],
   archived: false,
   createdAt: '2026-08-04T00:00:00Z',
   updatedAt: '2026-08-04T00:00:00Z',
@@ -45,10 +52,12 @@ const company: Company = {
   industries: ['로봇'],
   companySize: 'MEDIUM',
   annualRevenue: 120_000_000_000,
+  revenueUnit: 'HUNDRED_MILLION',
   employeeCount: 420,
   address: '성남',
   foundedOn: '2015-03-01',
   summary: '합성 기업',
+  benefits: '유연근무·교육비',
   memo: '메모',
   openPostings: [],
   createdAt: '2026-08-04T00:00:00Z',
@@ -92,18 +101,72 @@ describe('CompanyWorkspace', () => {
     expect(drawer.text()).toContain('백엔드 엔지니어')
   })
 
+  it('기업 상세에서 뉴스·유튜브 앨범 탭을 연다', async () => {
+    const wrapper = mount(CompanyWorkspace)
+    await flushPromises()
+    await wrapper.get('.card').trigger('click')
+    await flushPromises()
+
+    await wrapper.findAll('.detail-tabs button')[1].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.content-album').exists()).toBe(true)
+    expect(wrapper.text()).toContain('저장한 뉴스나 유튜브가 없습니다.')
+  })
+
+  /** 역방향으로 건너온 기업은 목록을 읽자마자 드로어가 열려 있어야 한다. */
+  it('focus 로 넘어온 기업의 드로어를 열고 시작한다', async () => {
+    const wrapper = mount(CompanyWorkspace, { props: { focus: company.id } })
+    await flushPromises()
+
+    expect(api.getCompany).toHaveBeenCalledWith(company.id)
+    expect(wrapper.get('.drawer').text()).toContain('루멘 로보틱스 데모')
+  })
+
+  /** 종속 데이터를 더블클릭하면 그 데이터의 화면이 열린다. 라우팅은 App 이 한다. */
+  it('상세의 채용정보 행을 더블클릭하면 공고 열기를 요청한다', async () => {
+    const wrapper = mount(CompanyWorkspace)
+    await flushPromises()
+    await wrapper.get('.card').trigger('click')
+    await flushPromises()
+
+    const row = wrapper.get('.drawer .mini-row')
+    expect(row.element.tagName).toBe('BUTTON')
+
+    await row.trigger('dblclick')
+
+    expect(wrapper.emitted('openPosting')?.[0]).toEqual([posting.id])
+  })
+
   it('드로어에서 수정을 누르면 같은 자리에서 폼으로 바뀐다', async () => {
     const wrapper = mount(CompanyWorkspace)
     await flushPromises()
     await wrapper.get('.card').trigger('click')
     await flushPromises()
 
-    await wrapper.get('.drawer__foot .secondary').trigger('click')
+    await wrapper.get('.drawer__actions .secondary').trigger('click')
 
     expect(wrapper.find('#company-form').exists()).toBe(true)
     expect(wrapper.findAll('.drawer')).toHaveLength(1)
     expect(wrapper.get<HTMLInputElement>('#company-form input').element.value)
       .toBe('루멘 로보틱스 데모')
+  })
+
+  it('기업 수정 저장이 API 호출과 상세 복귀까지 이어진다', async () => {
+    vi.mocked(api.updateCompany).mockResolvedValue({ ...company, summary: '수정한 소개' })
+    const wrapper = mount(CompanyWorkspace)
+    await flushPromises()
+    await wrapper.get('.card').trigger('click')
+    await flushPromises()
+    await wrapper.get('.drawer__actions .secondary').trigger('click')
+
+    await wrapper.get<HTMLTextAreaElement>('#company-form textarea').setValue('수정한 소개')
+    await wrapper.get('#company-form').trigger('submit')
+    await flushPromises()
+
+    expect(api.updateCompany).toHaveBeenCalledWith(company.id, expect.objectContaining({ summary: '수정한 소개' }))
+    expect(wrapper.find('#company-form').exists()).toBe(false)
+    expect(wrapper.text()).toContain('기업 정보를 수정했습니다.')
   })
 
   it('확인 후 삭제 API를 호출한다', async () => {
@@ -112,7 +175,7 @@ describe('CompanyWorkspace', () => {
     await wrapper.get('.card').trigger('click')
     await flushPromises()
 
-    await wrapper.get('.drawer__foot .danger').trigger('click')
+    await wrapper.get('.drawer__actions .danger').trigger('click')
     await wrapper.get('.confirm-card .danger.solid').trigger('click')
     await flushPromises()
 

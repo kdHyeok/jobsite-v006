@@ -40,11 +40,40 @@ vi.mock('../api/postings', () => {
     ApiClientError,
     listPostings: vi.fn(() => Promise.resolve([])),
     listArchivedPostings: vi.fn(() => Promise.resolve([])),
+    getPosting: vi.fn(),
     createPosting: vi.fn(),
     updatePosting: vi.fn(),
-    changePostingStage: vi.fn(),
+    changePostingStatus: vi.fn(),
+    changeStepResult: vi.fn(),
     setPostingArchived: vi.fn(),
     deletePosting: vi.fn(),
+  }
+})
+
+vi.mock('../api/positions', () => {
+  class ApiClientError extends Error {
+    fieldErrors = {}
+  }
+  return {
+    ApiClientError,
+    listPositions: vi.fn(() => Promise.resolve([])),
+    getPosition: vi.fn(),
+    updatePosition: vi.fn(),
+    replacePositionReferences: vi.fn(),
+    deletePosition: vi.fn(),
+  }
+})
+
+vi.mock('../api/references', () => {
+  class ApiClientError extends Error {
+    fieldErrors = {}
+  }
+  return {
+    ApiClientError,
+    listReferences: vi.fn(() => Promise.resolve([])),
+    createReference: vi.fn(),
+    updateReference: vi.fn(),
+    deleteReference: vi.fn(),
   }
 })
 
@@ -125,7 +154,9 @@ describe('App 접근 제어', () => {
     await flushPromises()
 
     expect(wrapper.find('.auth-card').exists()).toBe(false)
-    expect(wrapper.find('.segmented').text()).toContain('기업')
+    // 홈은 채용공고. 세그먼트 순서: 채용공고 → 모집 직무 → 기업
+    expect(wrapper.find('.page-head').text()).toContain('채용공고')
+    expect(wrapper.findAll('.segmented button').map((b) => b.text())).toEqual(['채용공고', '모집 직무', '기업'])
     // 아바타는 이름 첫 글자, 툴팁은 이메일
     const avatar = wrapper.get('.avatar')
     expect(avatar.text()).toBe('홍')
@@ -178,15 +209,18 @@ describe('App 접근 제어', () => {
     expect(asMember.find('.topbar-actions').text()).not.toContain('관리자')
   })
 
-  it('/postings 에서는 채용공고 보드를 보여준다', async () => {
-    setPath(ROUTES.postings)
+  it('/positions 는 모집 직무, /companies 는 기업 화면을 보여준다', async () => {
     vi.mocked(auth.fetchMe).mockResolvedValue(member)
 
-    const wrapper = mount(App)
+    setPath(ROUTES.positions)
+    const positions = mount(App)
     await flushPromises()
+    expect(positions.find('.page-head').text()).toContain('모집 직무')
 
-    expect(wrapper.find('.page-head').text()).toContain('채용공고')
-    expect(wrapper.find('.tabs').exists()).toBe(true)
+    setPath(ROUTES.companies)
+    const companies = mount(App)
+    await flushPromises()
+    expect(companies.find('.page-head').text()).toContain('기업')
   })
 
   /** 일반 계정에게는 관리자 링크도, /admin 화면도 주지 않는다. */

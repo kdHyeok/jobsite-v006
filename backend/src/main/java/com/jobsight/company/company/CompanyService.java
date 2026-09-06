@@ -41,7 +41,7 @@ public class CompanyService {
     /** 상세에는 마감이 지나지 않은 공고를 채운다. 사용자가 입력하는 값이 아니다. */
     public CompanyResponse findById(UUID id) {
         Company company = findOwnedEntity(id);
-        return CompanyResponse.of(company, postings.findOpenByCompany(company.getId(), company.getName()));
+        return CompanyResponse.of(company, postings.findOpenByCompany(company.getId()));
     }
 
     @Transactional
@@ -55,7 +55,7 @@ public class CompanyService {
         Company company = findOwnedEntity(id);
         company.update(toAttributes(request));
         Company saved = repository.save(company);
-        return CompanyResponse.of(saved, postings.findOpenByCompany(saved.getId(), saved.getName()));
+        return CompanyResponse.of(saved, postings.findOpenByCompany(saved.getId()));
     }
 
     @Transactional
@@ -77,10 +77,12 @@ public class CompanyService {
                 normalizeIndustries(request.industries()),
                 request.companySize(),
                 request.annualRevenue(),
+                request.annualRevenue() == null ? null : revenueUnit(request),
                 request.employeeCount(),
                 normalize(request.address()),
                 request.foundedOn(),
                 normalize(request.summary()),
+                normalize(request.benefits()),
                 normalize(request.memo())
         );
     }
@@ -106,5 +108,10 @@ public class CompanyService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static RevenueUnit revenueUnit(CompanyRequest request) {
+        if (request.revenueUnit() != null) return request.revenueUnit();
+        return request.annualRevenue() >= 100_000_000L ? RevenueUnit.HUNDRED_MILLION : RevenueUnit.TEN_THOUSAND;
     }
 }

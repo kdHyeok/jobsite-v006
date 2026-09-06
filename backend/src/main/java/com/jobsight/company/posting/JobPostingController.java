@@ -3,7 +3,8 @@ package com.jobsight.company.posting;
 import com.jobsight.company.common.ApiPaths;
 import com.jobsight.company.posting.dto.JobPostingRequest;
 import com.jobsight.company.posting.dto.JobPostingResponse;
-import com.jobsight.company.posting.dto.StageUpdateRequest;
+import com.jobsight.company.posting.dto.StatusUpdateRequest;
+import com.jobsight.company.posting.dto.StepResultUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,7 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 /** 모든 응답은 로그인 계정이 소유한 공고로 한정된다. 타인 소유 id 는 404. */
-@Tag(name = "postings", description = "채용공고 CRUD. 마감 임박 순 정렬, 마감된 관심 공고 자동 보관. 인증 필수.")
+@Tag(name = "postings", description = "채용공고. 상태별 진행 관리, 마감된 미지원 공고와 탈락 공고 자동 보관, 절차 단계. 인증 필수.")
 @RestController
 @RequestMapping(ApiPaths.POSTINGS)
 public class JobPostingController {
@@ -36,7 +37,7 @@ public class JobPostingController {
 
     @Operation(summary = "공고 목록",
             description = "기본은 진행 중 공고를 마감 임박 순(상시채용은 맨 뒤)으로. archived=true 면 보관함. "
-                    + "조회 시점에 마감 지난 '관심' 공고를 보관함으로 옮긴다.")
+                    + "조회 시점에 마감 지난 관심·작성 중 공고와 탈락 공고를 보관함으로 옮긴다.")
     @GetMapping
     public List<JobPostingResponse> findAll(
             @RequestParam(name = "archived", defaultValue = "false") boolean archived) {
@@ -50,25 +51,35 @@ public class JobPostingController {
     }
 
     @Operation(summary = "공고 생성",
-            description = "companyId 를 주면 그 기업에 연결되고 고용회사명은 기업 이름을 따른다. 남의 기업이면 404.")
+            description = "companyId 가 없으면 companyName 으로 기업을 찾거나 새로 만든다. "
+                    + "positions 가 비면 제목 이름의 직무 하나를 만든다. steps 순서가 절차 순서.")
     @PostMapping
     public ResponseEntity<JobPostingResponse> create(@Valid @RequestBody JobPostingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
     }
 
-    @Operation(summary = "공고 수정", description = "타인 소유이거나 없으면 404.")
+    @Operation(summary = "공고 수정",
+            description = "positions·steps 는 통째로 교체된다. 요청에 빠진 기존 직무는 삭제된다.")
     @PutMapping("/{id}")
     public JobPostingResponse update(@PathVariable UUID id,
                                      @Valid @RequestBody JobPostingRequest request) {
         return service.update(id, request);
     }
 
-    @Operation(summary = "지원단계 변경",
-            description = "관심 외 단계로 옮기면 보관함에서 자동으로 꺼낸다(지원 중인 공고가 보관함에 있으면 앞뒤가 맞지 않는다).")
-    @PatchMapping("/{id}/stage")
-    public JobPostingResponse changeStage(@PathVariable UUID id,
-                                          @Valid @RequestBody StageUpdateRequest request) {
-        return service.changeStage(id, request.stage());
+    @Operation(summary = "지원 상태 변경",
+            description = "탈락 상태는 즉시 보관하고, 진행 상태로 바꾸면 보관함에서 자동으로 꺼낸다.")
+    @PatchMapping("/{id}/status")
+    public JobPostingResponse changeStatus(@PathVariable UUID id,
+                                           @Valid @RequestBody StatusUpdateRequest request) {
+        return service.changeStatus(id, request.status());
+    }
+
+    @Operation(summary = "절차 단계 결과 변경", description = "seq 는 0-based. 없는 단계면 404.")
+    @PatchMapping("/{id}/steps/{seq}")
+    public JobPostingResponse changeStepResult(@PathVariable UUID id,
+                                               @PathVariable int seq,
+                                               @Valid @RequestBody StepResultUpdateRequest request) {
+        return service.changeStepResult(id, seq, request.result());
     }
 
     @Operation(summary = "보관/복원", description = "archived=true 면 보관함으로, false 면 목록으로 되돌린다.")
@@ -78,7 +89,7 @@ public class JobPostingController {
         return service.setArchived(id, archived);
     }
 
-    @Operation(summary = "공고 삭제", description = "타인 소유이거나 없으면 404.")
+    @Operation(summary = "공고 삭제", description = "직무·절차도 함께 삭제된다. 타인 소유이거나 없으면 404.")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.delete(id);

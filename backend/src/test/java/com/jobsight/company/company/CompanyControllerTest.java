@@ -44,8 +44,8 @@ class CompanyControllerTest {
         var company = new CompanyResponse(
                 UUID.randomUUID(), "테스트 기업", null,
                 List.of("IT서비스", "금융권"), CompanySize.MEDIUM,
-                1_000_000_000L, 250, "서울 강남", LocalDate.of(2015, 3, 1),
-                null, null, List.of(), Instant.now(), Instant.now()
+                1_000_000_000L, RevenueUnit.HUNDRED_MILLION, 250, "서울 강남", LocalDate.of(2015, 3, 1),
+                null, null, null, List.of(), Instant.now(), Instant.now()
         );
         given(service.findAll()).willReturn(List.of(company));
 

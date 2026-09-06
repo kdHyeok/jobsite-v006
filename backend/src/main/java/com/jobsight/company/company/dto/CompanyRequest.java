@@ -1,6 +1,7 @@
 package com.jobsight.company.company.dto;
 
 import com.jobsight.company.company.CompanySize;
+import com.jobsight.company.company.RevenueUnit;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -30,6 +31,8 @@ public record CompanyRequest(
         @PositiveOrZero(message = "매출액은 0 이상이어야 합니다.")
         Long annualRevenue,
 
+        RevenueUnit revenueUnit,
+
         @PositiveOrZero(message = "사원수는 0 이상이어야 합니다.")
         Integer employeeCount,
 
@@ -41,6 +44,9 @@ public record CompanyRequest(
 
         @Size(max = 2000, message = "간략 소개는 2,000자 이하여야 합니다.")
         String summary,
+
+        @Size(max = 5000, message = "기업 복지는 5,000자 이하여야 합니다.")
+        String benefits,
 
         @Size(max = 5000, message = "메모는 5,000자 이하여야 합니다.")
         String memo

@@ -1,50 +1,53 @@
 package com.jobsight.company.posting.dto;
 
-import com.jobsight.company.posting.ApplicationStage;
+import com.jobsight.company.posting.ApplicationStatus;
 import com.jobsight.company.posting.EmploymentType;
 import com.jobsight.company.posting.JobPosting;
+import com.jobsight.company.position.dto.PositionSummary;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 /**
  * D-day 는 담지 않는다. 프런트가 deadlineAt 을 사용자 시계로 계산한다.
- * 서버가 계산해 내려주면 자정을 넘길 때 화면이 틀어진다.
+ * positions 는 요약(id·name·team…)만. 직무 상세는 /api/positions/{id}.
  */
 public record JobPostingResponse(
         UUID id,
         UUID companyId,
-        /** 기업을 연결했으면 기업 이름, 아니면 입력한 고용회사명. */
         String companyName,
-        String position,
+        String title,
         String postingUrl,
         EmploymentType employmentType,
         Instant deadlineAt,
-        ApplicationStage stage,
-        String headcount,
-        String workLocation,
+        ApplicationStatus status,
         String qualifications,
-        String responsibilities,
-        String requiredSkills,
+        UUID targetPositionId,
+        List<StepResponse> steps,
+        List<PositionSummary> positions,
         boolean archived,
         Instant createdAt,
         Instant updatedAt
 ) {
-    public static JobPostingResponse of(JobPosting posting, String resolvedCompanyName) {
+    public static JobPostingResponse of(JobPosting posting, String companyName, List<PositionSummary> positions) {
+        List<StepResponse> steps = IntStream.range(0, posting.getSteps().size())
+                .mapToObj(i -> StepResponse.of(i, posting.getSteps().get(i)))
+                .toList();
         return new JobPostingResponse(
                 posting.getId(),
                 posting.getCompanyId(),
-                resolvedCompanyName,
-                posting.getPosition(),
+                companyName,
+                posting.getTitle(),
                 posting.getPostingUrl(),
                 posting.getEmploymentType(),
                 posting.getDeadlineAt(),
-                posting.getStage(),
-                posting.getHeadcount(),
-                posting.getWorkLocation(),
+                posting.getStatus(),
                 posting.getQualifications(),
-                posting.getResponsibilities(),
-                posting.getRequiredSkills(),
+                posting.getTargetPositionId(),
+                steps,
+                positions,
                 posting.isArchived(),
                 posting.getCreatedAt(),
                 posting.getUpdatedAt()

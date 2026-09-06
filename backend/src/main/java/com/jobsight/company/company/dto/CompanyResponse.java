@@ -2,6 +2,7 @@ package com.jobsight.company.company.dto;
 
 import com.jobsight.company.company.Company;
 import com.jobsight.company.company.CompanySize;
+import com.jobsight.company.company.RevenueUnit;
 import com.jobsight.company.posting.dto.JobPostingResponse;
 
 import java.time.Instant;
@@ -20,10 +21,12 @@ public record CompanyResponse(
         List<String> industries,
         CompanySize companySize,
         Long annualRevenue,
+        RevenueUnit revenueUnit,
         Integer employeeCount,
         String address,
         LocalDate foundedOn,
         String summary,
+        String benefits,
         String memo,
         List<JobPostingResponse> openPostings,
         Instant createdAt,
@@ -41,10 +44,12 @@ public record CompanyResponse(
                 List.copyOf(company.getIndustries()),
                 company.getCompanySize(),
                 company.getAnnualRevenue(),
+                company.getRevenueUnit(),
                 company.getEmployeeCount(),
                 company.getAddress(),
                 company.getFoundedOn(),
                 company.getSummary(),
+                company.getBenefits(),
                 company.getMemo(),
                 openPostings,
                 company.getCreatedAt(),
