@@ -26,6 +26,7 @@ PostgreSQL + Spring Boot 4.1(Java 21) + Vue 3(TypeScript) + nginx, Docker Compos
 | `frontend/src/**` | [docs/frontend.md](docs/frontend.md) |
 | 기업 정보·채용공고 도메인 | [docs/job-postings.md](docs/job-postings.md) |
 | 기업 뉴스·유튜브 자료 | [docs/company-content.md](docs/company-content.md) |
+| MCP·OAuth 위임·플러그인 | [docs/mcp-plugin.md](docs/mcp-plugin.md) |
 | 화면 배치·색·컴포넌트 | [docs/design-system.md](docs/design-system.md) |
 | `nginx.conf`, `compose*.yaml`, `.github/**`, 배포 | [docs/nginx-deploy.md](docs/nginx-deploy.md) |
 | "왜 이렇게 했지?" | [docs/decisions.md](docs/decisions.md) — 되돌리기 전에 반드시 읽는다 |

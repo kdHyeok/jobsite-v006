@@ -1,0 +1,19 @@
+{
+  "name": "jobsight",
+  "version": "0.1.0",
+  "description": "Google OAuth로 연결한 JobSight의 기업, 채용공고, 모집 직무, 참고 자료, 뉴스·유튜브를 관리합니다.",
+  "author": {
+    "name": "JobSight"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "JobSight",
+    "shortDescription": "기업 조사와 채용 지원 정보를 함께 관리합니다.",
+    "longDescription": "기업 정보·복지, 채용공고·상태·채용절차, 모집 직무·역량·기술 스택, 공유 참고 정보, 기업 뉴스·유튜브 자료를 조회하고 추가·수정·삭제합니다. Google 로그인 계정의 데이터만 접근하며 관리자 작업은 별도 권한을 요구합니다.",
+    "developerName": "JobSight",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["내 관심 공고와 이번 주 마감 일정을 정리해줘.", "기업에 뉴스 자료를 저장하고 관련 직무 역량을 정리해줘."]
+  },
+  "mcpServers": "./.mcp.json"
+}

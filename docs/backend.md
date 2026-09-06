@@ -7,7 +7,7 @@
 | 모든 HTTP 경로 상수 | `common/ApiPaths.java` — 컨트롤러와 `SecurityConfig` 가 같은 상수를 쓴다 |
 | 인가 규칙, CSRF, OAuth 실패 처리 | `auth/SecurityConfig.java` |
 | Google 로그인 → 계정 해석 | `auth/GoogleOidcUserService.java` → `user/AppUserService.resolveGoogleUser` |
-| 로그인 principal | `auth/AppOidcUser.java` (유일한 principal 타입) |
+| 로그인 principal | 브라우저 `auth/AppOidcUser.java`, MCP 위임 `mcp/McpPrincipal.java` |
 | 현재 사용자 읽기 | `auth/CurrentUser.java` — 서비스가 직접 호출, 컨트롤러는 소유자를 넘기지 않는다 |
 | Google 클라이언트 등록 (조건부) | `config/GoogleOAuthConfig.java` |
 | 에러 응답 형식 | `common/GlobalExceptionHandler.java`, `common/ApiError`, `common/ApiRuleException` |
@@ -54,3 +54,9 @@ nginx → SecurityFilterChain
 ## 컴파일·테스트
 
 컨테이너에서 `./gradlew compileJava compileTestJava`. 전체 `test` 는 Testcontainers 라 Docker 소켓이 필요하다(README). 종료코드는 `$?` 로 직접 읽는다.
+
+MCP는 별도의 stateless Bearer 체인과 Spring OAuth Authorization Server를 사용한다.
+`mcp/*`의 입력 검증·허용 도구·scope/현재 DB 역할 검사가 컨트롤러 직접 호출을 보호한다.
+OAuth/MCP 테스트는 `./gradlew test --tests '*Mcp*Test'`로 Docker 소켓 없이 실행한다.
+Spring Security 7의 AuthorizationServerConfigurer 패키지는 `security.config.annotation.web.configurers.oauth2.server.authorization`이다.
+등록과 제한은 [mcp-plugin.md](mcp-plugin.md)를 따른다.

@@ -1,0 +1,6 @@
+# Optional exact callback allowlist; no client secret is needed for this public PKCE client.
+# docker compose -f compose.yaml -f compose.mcp.yaml up -d --build
+services:
+  backend:
+    environment:
+      APP_MCP_REDIRECT_URIS: ${MCP_REDIRECT_URIS:?Set the exact callback URI shown by your OAuth client}

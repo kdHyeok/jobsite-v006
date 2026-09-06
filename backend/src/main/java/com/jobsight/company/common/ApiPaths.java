@@ -12,6 +12,13 @@ public final class ApiPaths {
     }
 
     public static final String API = "/api";
+    public static final String MCP = "/mcp";
+    public static final String MCP_METADATA = "/.well-known/oauth-protected-resource";
+    public static final String OAUTH_METADATA = "/.well-known/oauth-authorization-server";
+    public static final String MCP_AUTHORIZE = "/oauth2/authorize";
+    public static final String MCP_TOKEN = "/oauth2/token";
+    public static final String MCP_REVOKE = "/oauth2/revoke";
+    public static final String MCP_INTROSPECT = "/oauth2/introspect";
 
     public static final String AUTH = API + "/auth";
     public static final String AUTH_ME = "/me";

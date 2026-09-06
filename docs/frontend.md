@@ -32,4 +32,6 @@ npm run type-check && npm test
 
 ## 빌드
 
+MCP/OAuth 클라이언트 경로는 `routes.ts`의 `MCP_ENDPOINTS`에 정리한다. SPA는 이 경로로 세션 인증 API 요청을 보내지 않는다.
+
 `npm run build` = `vue-tsc -b && vite build`. Dockerfile 이 이걸 실행하므로 타입 오류는 이미지 빌드 실패로 드러난다.

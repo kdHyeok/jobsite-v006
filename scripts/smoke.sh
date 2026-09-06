@@ -45,6 +45,22 @@ check "  me.authenticated (쿠키 없음)"       "false" "$(curl -sS "$BASE/api/
 
 echo ""
 echo "[미인증 차단]"
+check "POST /mcp (Bearer 없음)"             "401" "$(code -X POST -H 'Content-Type: application/json' -d '{}' "$BASE/mcp")"
+check "GET MCP resource metadata"            "200" "$(code "$BASE/.well-known/oauth-protected-resource")"
+check "GET OAuth server metadata"            "200" "$(code "$BASE/.well-known/oauth-authorization-server")"
+oauth_metadata="$(curl -fsS "$BASE/.well-known/oauth-authorization-server" | tr -d '\r\n\t ')"
+resource_metadata="$(curl -fsS "$BASE/.well-known/oauth-protected-resource" | tr -d '\r\n\t ')"
+for field in "\"issuer\":\"$BASE\"" "\"authorization_endpoint\":\"$BASE/oauth2/authorize\"" "\"token_endpoint\":\"$BASE/oauth2/token\""; do
+  case "$oauth_metadata" in
+    *"$field"*) check "OAuth $field" "present" "present" ;;
+    *) check "OAuth $field" "present" "missing" ;;
+  esac
+done
+check "OAuth PKCE S256 advertised" "S256" "$(printf '%s' "$oauth_metadata" | grep -o '"code_challenge_methods_supported":\[[^]]*\]' | grep -o 'S256')"
+case "$resource_metadata" in
+  *"\"resource\":\"$BASE/mcp\""*) check "MCP resource == BASE/mcp" "match" "match" ;;
+  *) check "MCP resource == BASE/mcp" "match" "missing" ;;
+esac
 check "GET /api/companies"                  "401"  "$(code "$BASE/api/companies")"
 check "GET /api/companies/{id}/contents"    "401"  "$(code "$BASE/api/companies/00000000-0000-0000-0000-000000000000/contents")"
 check "GET /api/postings"                   "401"  "$(code "$BASE/api/postings")"

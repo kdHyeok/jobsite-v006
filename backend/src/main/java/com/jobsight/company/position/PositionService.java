@@ -63,6 +63,17 @@ public class PositionService {
     }
 
     @Transactional
+    public PositionResponse create(UUID postingId, PositionRequest request) {
+        postingRepository.findByIdAndOwnerId(postingId, currentUser.id())
+                .orElseThrow(() -> new ResourceNotFoundException(postingId));
+        if (repository.countByPostingIdAndOwnerId(postingId, currentUser.id()) >= 30) {
+            throw new ApiRuleException(HttpStatus.CONFLICT, "POSITION_LIMIT", "직무는 30개 이하여야 합니다.");
+        }
+        Position position = repository.save(new Position(currentUser.id(), postingId, request.name().trim()));
+        return update(position.getId(), request);
+    }
+
+    @Transactional
     public PositionResponse update(UUID id, PositionRequest request) {
         Position position = findOwned(id);
         position.update(new PositionAttributes(

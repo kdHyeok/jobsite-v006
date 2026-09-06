@@ -34,6 +34,11 @@ public class CurrentUser {
     }
 
     public UUID id() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()
+                && authentication.getPrincipal() instanceof com.jobsight.company.mcp.McpPrincipal principal) {
+            return principal.userId();
+        }
         return require().appUserId();
     }
 }

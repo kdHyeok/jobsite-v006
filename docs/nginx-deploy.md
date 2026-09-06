@@ -9,12 +9,15 @@
 - 프록시 헤더는 `$http_host`(브라우저가 보낸 Host 원본). `$host` 는 포트를 떼고 `$server_port` 는 80 이다.
 - `X-Forwarded-Port` 를 보내지 않는다. 절대 URL 이 필요한 곳은 백엔드가 `PUBLIC_BASE_URL` 로 만든다.
 
-백엔드로 넘기는 접두사(파일 상단 표와 동일): `/api/`, `/oauth2/`, `/login/`, `/swagger-ui`, `/v3/`.
+백엔드로 넘기는 접두사(파일 상단 표와 동일): `/api/`, `/oauth2/`, `/login/`, `/swagger-ui`, `/v3/`, `/mcp`, `/.well-known/`.
 `/admin` 은 `auth_request` → `/api/auth/admin-check`(204 면 index.html, 아니면 302 `/`). 데이터 보호는 백엔드가 하고 이 게이트는 UI 노출 방지용이다.
 
 경로를 추가하면 `nginx.conf` 표 · `ApiPaths.java` · `routes.ts` 를 함께 갱신한다.
 
 ## Compose
+
+MCP의 정확한 OAuth callback 설정은 선택적 `compose.mcp.yaml`에서 `MCP_REDIRECT_URIS`를 받는다.
+등록 절차와 공개 HTTPS 접근 조건은 [mcp-plugin.md](mcp-plugin.md)를 따른다.
 
 - `compose.yaml` 하나로 로컬·서버 모두 소스에서 빌드한다. 이미지 레지스트리를 쓰지 않는다.
 - 비밀값: `.secrets/postgres_password`, `.secrets/google_client_secret` → compose secret → 컨테이너 `/run/secrets/<프로퍼티키>` → Spring `configtree`. 파일 이름이 프로퍼티 키다.

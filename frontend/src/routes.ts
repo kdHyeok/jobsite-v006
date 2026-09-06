@@ -46,6 +46,17 @@ export const API = {
 /** Spring Security 가 소유하는 경로. 브라우저 네비게이션으로만 쓴다(fetch 금지). */
 export const GOOGLE_LOGIN_URL = '/oauth2/authorization/google'
 
+/** MCP 클라이언트용 경로. SPA 쿠키 API와 별개인 OAuth 위임 채널. */
+export const MCP_ENDPOINTS = {
+  server: '/mcp',
+  resourceMetadata: '/.well-known/oauth-protected-resource',
+  authorizationMetadata: '/.well-known/oauth-authorization-server',
+  authorize: '/oauth2/authorize',
+  token: '/oauth2/token',
+  revoke: '/oauth2/revoke',
+  introspect: '/oauth2/introspect',
+} as const
+
 /**
  * 다른 화면의 항목을 열어 달라고 넘기는 쿼리 파라미터.
  * 드로어 안의 종속 데이터를 더블클릭하면 `/positions?focus=<id>` 처럼 이동한다.

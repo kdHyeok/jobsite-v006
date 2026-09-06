@@ -114,6 +114,9 @@ cd frontend && npm run type-check && npm test
 
 ## 함정
 
+- MCP는 기존 컨트롤러의 DTO 검증·서비스를 사용한다. `position_create`만 공고 소유권 확인 후 직무를 추가하는
+  `PositionService.create`를 별도로 사용한다. 다른 직무·공고 배열은 변경하지 않으며 최대 30개를 검사한다.
+
 - **마감 시각은 로컬 입력 → UTC 저장.** `datetime-local` 값에는 시간대가 없다. `toUtcIso()` 로 변환해 보낸다.
 - 새 공고와 새 절차 단계의 시각 기본값은 폼을 여는 시점의 현재 분이다. 기존 행의 빈 시각을 임의로 채우지는 않는다.
 - **D-day 는 서버가 내려주지 않는다.** 프런트가 사용자 시계로 계산한다.

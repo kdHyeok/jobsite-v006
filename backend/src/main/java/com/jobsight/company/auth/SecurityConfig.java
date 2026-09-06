@@ -9,8 +9,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,6 +23,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -48,9 +51,11 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(3)
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             GoogleOidcUserService googleOidcUserService,
+            @Value("${app.public-base-url}") String publicBaseUrl,
             ObjectProvider<ClientRegistrationRepository> clientRegistrations) throws Exception {
 
         // 쿠키 기반 세션 인증을 쓰는 순간 CSRF가 실제 공격 벡터가 되므로 토큰을 유지한다.
@@ -96,7 +101,20 @@ public class SecurityConfig {
         if (clientRegistrations.getIfAvailable() != null) {
             http.oauth2Login(oauth -> oauth
                     .userInfoEndpoint(userInfo -> userInfo.oidcUserService(googleOidcUserService))
-                    .defaultSuccessUrl("/", true)
+                    .successHandler((request, response, authentication) -> {
+                        var cache = new HttpSessionRequestCache();
+                        var saved = cache.getRequest(request, response);
+                        cache.removeRequest(request, response);
+                        String target = "/";
+                        if (saved != null) {
+                            var uri = java.net.URI.create(saved.getRedirectUrl());
+                            if (ApiPaths.MCP_AUTHORIZE.equals(uri.getPath())) {
+                                target = publicBaseUrl.replaceAll("/$", "") + ApiPaths.MCP_AUTHORIZE
+                                        + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
+                            }
+                        }
+                        response.sendRedirect(target);
+                    })
                     .failureHandler(this::onOAuthFailure)
             );
         }
