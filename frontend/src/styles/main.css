@@ -175,7 +175,8 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .form-grid > *, .repeater__row > * { min-width: 0; }
 .field { display: grid; gap: 6px; font-size: 13px; }
-.field.full { grid-column: 1 / -1; }
+/* .field 뿐 아니라 .repeater·.picker__actions 등 폼 그리드를 가로지르는 모든 것에 쓴다. */
+.full { grid-column: 1 / -1; }
 .field > span { color: var(--muted); font-weight: 500; }
 .field > span small { font-weight: 400; }
 .field b { color: var(--negative); }
@@ -265,7 +266,11 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 /* ── 폼 반복 입력 (직무·절차) ──────────────────── */
 .repeater { display: grid; gap: 8px; }
 .repeater__row { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
-.repeater__row--step { grid-template-columns: 24px minmax(0, 1fr) minmax(0, 190px) auto auto auto; }
+/* 이름 줄 + 일정 줄. 한 줄에 여섯 칸을 넣으면 520px 드로어에서 이름과 날짜가 함께 잘린다. */
+.repeater__row--step { grid-template-columns: 24px minmax(0, 1fr) auto; row-gap: 8px; }
+.repeater__move { display: flex; gap: 2px; }
+.repeater__when { grid-column: 2 / -1; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.repeater__when input { flex: 1; min-width: 0; }
 .repeater__row input { min-height: 36px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); }
 .repeater__seq { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--surface-sunken); color: var(--muted); font-size: 12px; font-weight: 600; }
 .repeater .button { justify-self: start; }
@@ -324,8 +329,6 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .content-card__tools button.danger:hover { background: var(--negative-soft); color: var(--negative); }
 
 @media (max-width: 720px) {
-  .repeater__row--step { grid-template-columns: 24px 1fr auto auto auto; }
-  .repeater__row--step input[type='datetime-local'] { display: none; }
   .picker.form-grid { grid-template-columns: 1fr; }
   .content-grid { grid-template-columns: 1fr; }
 }

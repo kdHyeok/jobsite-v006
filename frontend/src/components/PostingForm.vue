@@ -186,10 +186,16 @@ const statuses = selectableStatuses.map((status) => [status, statusLabels[status
         <div v-for="(row, index) in form.steps" :key="index" class="repeater__row repeater__row--step">
           <span class="repeater__seq">{{ index + 1 }}</span>
           <input v-model="row.name" maxlength="60" placeholder="예: 서류 / 인적성 / 코딩테스트 / 면접" />
-          <input v-model="row.scheduledLocal" type="datetime-local" title="일정(선택)" />
-          <button type="button" class="icon-button" aria-label="위로" :disabled="index === 0" @click="moveStep(index, -1)">↑</button>
-          <button type="button" class="icon-button" aria-label="아래로" :disabled="index === form.steps.length - 1" @click="moveStep(index, 1)">↓</button>
-          <button type="button" class="icon-button" aria-label="단계 삭제" @click="removeStep(index)">×</button>
+          <span class="repeater__move">
+            <button type="button" class="icon-button" aria-label="위로" :disabled="index === 0" @click="moveStep(index, -1)">↑</button>
+            <button type="button" class="icon-button" aria-label="아래로" :disabled="index === form.steps.length - 1" @click="moveStep(index, 1)">↓</button>
+            <button type="button" class="icon-button" aria-label="단계 삭제" @click="removeStep(index)">×</button>
+          </span>
+          <!-- 이름과 한 줄에 두면 520px 드로어에서 둘 다 잘린다. 일정은 아랫줄 전체 폭으로. -->
+          <label class="repeater__when">
+            <span>일정</span>
+            <input v-model="row.scheduledLocal" type="datetime-local" />
+          </label>
         </div>
         <small v-if="fieldError('steps')" class="field-error">{{ fieldError('steps') }}</small>
         <button type="button" class="button ghost compact" @click="addStep">+ 단계 추가</button>
