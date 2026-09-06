@@ -15,6 +15,8 @@
 
 ## 원칙
 
+- `/plugin`은 비로그인 사용자도 볼 수 있는 연결 가이드다. 상단 메뉴 버튼의 작은 사이드 패널로 진입한다. 관리자 항목은 ADMIN만 표시한다. canonical URL은 서버 공개 설정에서 가져온다. 화면에는 ChatGPT URL 연결과 Codex GitHub 설치·업데이트에 필요한 동작만 표시하고 CIMD·scope·수동 OAuth 같은 내부 설정은 노출하지 않는다.
+
 - **base URL 을 모른다.** nginx 뒤 same-origin 이라 상대 경로만 쓴다. 절대 URL 을 만들면 포트 차이에 노출된다.
 - **로그인은 fetch 가 아니라 네비게이션.** `<a :href="GOOGLE_LOGIN_URL">`. 실패는 `/?authError=CODE` 로 돌아오며 `LoginView` 가 문구로 바꾸고 쿼리를 지운다.
 - **상태 보유자는 화면당 하나.** 자식은 props-down / events-up. Pinia 없음.

@@ -29,6 +29,8 @@ services:
   backend:
     build:
       context: ./backend
+      additional_contexts:
+        plugin: ./plugins/jobsight
     restart: unless-stopped
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}

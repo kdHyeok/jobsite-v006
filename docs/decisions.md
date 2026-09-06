@@ -1,5 +1,10 @@
 # 결정 기록
 
+## ChatGPT URL-only 연결은 제한된 CIMD로
+매 커넥터 callback 수동 등록을 없애기 위해 ChatGPT의 공식 CIMD 문서를 검증한다. DCR 저장소를 추가하지 않는다.
+허용된 HTTPS 문서 URL만 요청하며 최대 64KiB/연결·읽기 타임아웃 각각 5초, 리다이렉트 금지, 128개/10분 캐시로 제한한다.
+사용자 데이터 접근은 여전히 Google 로그인·동의·PKCE·resource·scope로 보호한다. 공개 client_id는 신원 증명이나 인증 비밀이 아니다.
+
 ## Google 신원에 OAuth MCP 위임 추가
 사용자 요청으로 외부 ChatGPT/Codex 클라이언트가 서비스를 조작하도록 OAuth 위임을 추가했다.
 사람의 로그인은 계속 Google만 사용하고, MCP에는 별도 audience·scope를 가진 짧은 opaque token을 발급한다.
@@ -74,6 +79,10 @@ FK `ON DELETE CASCADE`. 소유자 없는 기업 행을 남기면 소유자 격�
 
 ## 절차는 공고 단위, 참고 정보는 계정 단위 (V10)
 결정 1·2. 직무별 절차는 `position_id` 컬럼 하나로 나중에 확장 가능하고, 참고 정보의 사용자 간 공유는 소유자 격리 불변 조건에 예외를 만들기 때문에 열지 않았다.
+
+## 플러그인 배포는 GitHub marketplace 중심
+
+사용자는 ZIP 다운로드가 아니라 예시 저장소처럼 GitHub 최신 플러그인 설치를 원했다. 사이트의 ZIP·PowerShell 다운로드 안내를 Codex marketplace 등록·설치·업데이트 명령으로 대체한다. 기존 ZIP API는 호환용으로 유지한다. GitHub 공개 여부나 사용자 Codex 설정은 자동 변경하지 않는다.
 
 ## 공고 폼은 직무 이름만, 직무 상세는 직무 페이지에서
 공고 폼에 직무 11개 필드를 직무 수만큼 반복하면 폼이 화면 서너 장이 된다. 공고 폼은 `id`+`name` 만, 나머지는 직무 드로어에서.

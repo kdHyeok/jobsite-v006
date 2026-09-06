@@ -56,7 +56,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "$PWD/frontend":/app -w /app node:24-alpin
 
 # backend 컴파일
 MSYS_NO_PATHCONV=1 docker run --rm -v jobsite-v006-gradle-cache:/root/.gradle \
-  -v "$PWD/backend":/workspace -w /workspace eclipse-temurin:21-jdk-alpine \
+  -v "$PWD":/workspace -w /workspace/backend eclipse-temurin:21-jdk-alpine \
   ./gradlew compileJava compileTestJava --no-daemon > build.log 2>&1; echo "exit=$?"
 
 # backend 전체 테스트 — Docker Desktop (Windows / Mac)
@@ -67,14 +67,14 @@ MSYS_NO_PATHCONV=1 docker run --rm \
   -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal -e TESTCONTAINERS_RYUK_DISABLED=true \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v jobsite-v006-gradle-cache:/root/.gradle \
-  -v "$PWD/backend":/workspace -w /workspace eclipse-temurin:21-jdk-alpine \
+  -v "$PWD":/workspace -w /workspace/backend eclipse-temurin:21-jdk-alpine \
   ./gradlew test --no-daemon > test.log 2>&1; echo "exit=$?"
 
 # backend 전체 테스트 — Linux 호스트 (배포 서버 등)
 docker run --rm --network host -e TESTCONTAINERS_HOST_OVERRIDE=127.0.0.1 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v jobsite-v006-gradle-cache:/root/.gradle \
-  -v "$PWD/backend":/workspace -w /workspace eclipse-temurin:21-jdk-alpine \
+  -v "$PWD":/workspace -w /workspace/backend eclipse-temurin:21-jdk-alpine \
   ./gradlew test --no-daemon > test.log 2>&1; echo "exit=$?"
 ```
 

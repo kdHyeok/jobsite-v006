@@ -57,6 +57,11 @@ for field in "\"issuer\":\"$BASE\"" "\"authorization_endpoint\":\"$BASE/oauth2/a
   esac
 done
 check "OAuth PKCE S256 advertised" "S256" "$(printf '%s' "$oauth_metadata" | grep -o '"code_challenge_methods_supported":\[[^]]*\]' | grep -o 'S256')"
+check "OAuth CIMD discovery" "true" "$(printf '%s' "$oauth_metadata" | grep -o '"client_id_metadata_document_supported":true' | cut -d: -f2)"
+check "GET plugin guide" "200" "$(code "$BASE/plugin")"
+check "GET plugin config" "200" "$(code "$BASE/plugin/config")"
+check "GET plugin skill" "200" "$(code "$BASE/plugin/skill")"
+check "GET plugin package" "200" "$(code "$BASE/plugin/download")"
 case "$resource_metadata" in
   *"\"resource\":\"$BASE/mcp\""*) check "MCP resource == BASE/mcp" "match" "match" ;;
   *) check "MCP resource == BASE/mcp" "match" "missing" ;;

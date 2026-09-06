@@ -16,6 +16,9 @@
 
 ## Compose
 
+백엔드 빌드의 `plugin` named context는 `plugins/jobsight`만 포함한다. `.env`·`.secrets`는 전달하지 않는다.
+`/plugin`은 공개 가이드 SPA, `/plugin/` 하위는 공개 설정·스킬·ZIP 다운로드를 위해 backend로 프록시한다.
+
 MCP의 정확한 OAuth callback 설정은 선택적 `compose.mcp.yaml`에서 `MCP_REDIRECT_URIS`를 받는다.
 등록 절차와 공개 HTTPS 접근 조건은 [mcp-plugin.md](mcp-plugin.md)를 따른다.
 

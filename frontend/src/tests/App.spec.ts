@@ -110,6 +110,19 @@ function setPath(path: string) {
 }
 
 describe('App 접근 제어', () => {
+  it('플러그인 메뉴는 비로그인 상태에도 연결 가이드를 연다', async () => {
+    vi.mocked(auth.fetchMe).mockResolvedValue(anonymous)
+    const wrapper = mount(App, { global: { stubs: { PluginGuide: { template: '<main data-guide>연결 가이드</main>' } } } })
+    await flushPromises()
+    await wrapper.get('[aria-controls="site-menu"]').trigger('click')
+    expect(wrapper.get('#site-menu').text()).not.toContain('관리자')
+    const button = wrapper.findAll('#site-menu button').find(b => b.text() === '플러그인 연결 가이드')!
+    await button.trigger('click')
+    expect(window.location.pathname).toBe(ROUTES.plugin)
+    expect(wrapper.find('[data-guide]').exists()).toBe(true)
+    expect(wrapper.find('#site-menu').exists()).toBe(false)
+    expect(wrapper.find('.auth-card').exists()).toBe(false)
+  })
   beforeEach(() => {
     setPath(ROUTES.home)
     vi.mocked(auth.fetchLoginOptions).mockReset().mockResolvedValue({
@@ -200,13 +213,18 @@ describe('App 접근 제어', () => {
     await flushPromises()
 
     expect(asAdmin.find('.segmented').text()).not.toContain('관리자')
-    expect(asAdmin.find('.topbar-actions').text()).toContain('관리자')
+    await asAdmin.get('[aria-controls="site-menu"]').trigger('click')
+    expect(asAdmin.get('#site-menu').text()).toContain('관리자')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await flushPromises()
+    expect(asAdmin.find('#site-menu').exists()).toBe(false)
 
     vi.mocked(auth.fetchMe).mockResolvedValue(member)
     const asMember = mount(App)
     await flushPromises()
 
-    expect(asMember.find('.topbar-actions').text()).not.toContain('관리자')
+    await asMember.get('[aria-controls="site-menu"]').trigger('click')
+    expect(asMember.get('#site-menu').text()).not.toContain('관리자')
   })
 
   it('/positions 는 모집 직무, /companies 는 기업 화면을 보여준다', async () => {

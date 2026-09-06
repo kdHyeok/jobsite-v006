@@ -14,6 +14,7 @@ export const ROUTES = {
   positions: '/positions',
   companies: '/companies',
   admin: '/admin',
+  plugin: '/plugin',
 } as const
 
 /** 백엔드 API. */
@@ -48,6 +49,9 @@ export const GOOGLE_LOGIN_URL = '/oauth2/authorization/google'
 
 /** MCP 클라이언트용 경로. SPA 쿠키 API와 별개인 OAuth 위임 채널. */
 export const MCP_ENDPOINTS = {
+  config: '/plugin/config',
+  skill: '/plugin/skill',
+  download: '/plugin/download',
   server: '/mcp',
   resourceMetadata: '/.well-known/oauth-protected-resource',
   authorizationMetadata: '/.well-known/oauth-authorization-server',
@@ -55,6 +59,10 @@ export const MCP_ENDPOINTS = {
   token: '/oauth2/token',
   revoke: '/oauth2/revoke',
   introspect: '/oauth2/introspect',
+} as const
+
+export const PLUGIN_LINKS = {
+  docs: 'https://developers.openai.com/plugins/deploy/connect-chatgpt',
 } as const
 
 /**

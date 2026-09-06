@@ -58,7 +58,8 @@ public class McpOAuthConfig {
 
     @Bean
     RegisteredClientRepository mcpClients(
-            @Value("${app.mcp.redirect-uris:https://chatgpt.com/connector_platform_oauth_redirect}") String redirects) {
+            @Value("${app.mcp.redirect-uris:https://chatgpt.com/connector_platform_oauth_redirect}") String redirects,
+            tools.jackson.databind.ObjectMapper mapper) {
         var client = RegisteredClient.withId("jobsight-plugin")
                 .clientId("jobsight-plugin").clientName("JobSight plugin")
                 .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
@@ -76,7 +77,7 @@ public class McpOAuthConfig {
             }
             client.redirectUri(uri.toString());
         }
-        return new InMemoryRegisteredClientRepository(client.build());
+        return new ChatGptClients(client.build(), mapper);
     }
 
     @Bean
@@ -108,6 +109,7 @@ public class McpOAuthConfig {
         http.securityMatcher(server.getEndpointsMatcher())
                 .with(server, config -> config.authorizationServerMetadataEndpoint(metadata ->
                         metadata.authorizationServerMetadataCustomizer(builder -> builder
+                                .claim("client_id_metadata_document_supported", true)
                                 .tokenEndpointAuthenticationMethods(methods -> { methods.clear(); methods.add("none"); }))))
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 .exceptionHandling(errors -> errors.authenticationEntryPoint(
@@ -138,12 +140,14 @@ public class McpOAuthConfig {
     @Bean @Order(2)
     SecurityFilterChain mcpResourceChain(HttpSecurity http, OAuth2AuthorizationService authorizations,
                                         AppUserRepository users) throws Exception {
-        http.securityMatcher(ApiPaths.MCP, ApiPaths.MCP_METADATA, ApiPaths.MCP_METADATA + ApiPaths.MCP)
+        http.securityMatcher(ApiPaths.MCP, ApiPaths.MCP_METADATA, ApiPaths.MCP_METADATA + ApiPaths.MCP,
+                        ApiPaths.PLUGIN_CONFIG, ApiPaths.PLUGIN_SKILL, ApiPaths.PLUGIN_DOWNLOAD)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(csrf -> csrf.disable())
                 .requestCache(cache -> cache.disable())
                 .authorizeHttpRequests(auth -> auth.requestMatchers(ApiPaths.MCP_METADATA,
-                        ApiPaths.MCP_METADATA + ApiPaths.MCP).permitAll().anyRequest().authenticated())
+                        ApiPaths.MCP_METADATA + ApiPaths.MCP, ApiPaths.PLUGIN_CONFIG,
+                        ApiPaths.PLUGIN_SKILL, ApiPaths.PLUGIN_DOWNLOAD).permitAll().anyRequest().authenticated())
                 .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, error) -> {
                     response.setHeader("WWW-Authenticate", challenge()); response.setStatus(401);
                 }))

@@ -13,6 +13,10 @@ public final class ApiPaths {
 
     public static final String API = "/api";
     public static final String MCP = "/mcp";
+    public static final String PLUGIN_GUIDE = "/plugin";
+    public static final String PLUGIN_CONFIG = PLUGIN_GUIDE + "/config";
+    public static final String PLUGIN_SKILL = PLUGIN_GUIDE + "/skill";
+    public static final String PLUGIN_DOWNLOAD = PLUGIN_GUIDE + "/download";
     public static final String MCP_METADATA = "/.well-known/oauth-protected-resource";
     public static final String OAUTH_METADATA = "/.well-known/oauth-authorization-server";
     public static final String MCP_AUTHORIZE = "/oauth2/authorize";

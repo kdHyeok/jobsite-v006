@@ -60,3 +60,8 @@ MCP는 별도의 stateless Bearer 체인과 Spring OAuth Authorization Server를
 OAuth/MCP 테스트는 `./gradlew test --tests '*Mcp*Test'`로 Docker 소켓 없이 실행한다.
 Spring Security 7의 AuthorizationServerConfigurer 패키지는 `security.config.annotation.web.configurers.oauth2.server.authorization`이다.
 등록과 제한은 [mcp-plugin.md](mcp-plugin.md)를 따른다.
+
+`ChatGptClients`는 고정 ChatGPT CIMD 경로만 조회하고 기존 사전 등록 클라이언트를 보존한다.
+실제 공개 문서의 복수 인증 방식 중 none을 선택하고, grant_types 중 authorization_code만 발급한다.
+스킬 리소스도 검증하려면 테스트 컨테이너에 저장소 루트를 `/workspace`로 마운트하고 `-w /workspace/backend`로 실행한다.
+`processResources`는 `../plugins/jobsight`의 스킬·manifest·MCP 파일만 포함한다.

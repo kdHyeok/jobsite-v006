@@ -7,6 +7,7 @@ import LoginView from './components/LoginView.vue'
 import PositionBoard from './components/PositionBoard.vue'
 import PostingBoard from './components/PostingBoard.vue'
 import UserMenu from './components/UserMenu.vue'
+import PluginGuide from './components/PluginGuide.vue'
 import { FOCUS_QUERY, ROUTES } from './routes'
 import type { Me } from './types/auth'
 
@@ -19,21 +20,28 @@ const search = ref(window.location.search)
 const me = ref<Me>(ANONYMOUS)
 const booting = ref(true)
 const bootError = ref('')
+const menuOpen = ref(false)
+const menuButton = ref<HTMLButtonElement | null>(null)
+function closeMenu() { menuOpen.value = false; menuButton.value?.focus() }
+function menuKey(event: KeyboardEvent) { if (event.key === 'Escape' && menuOpen.value) closeMenu() }
 
 const isAdmin = computed(() => me.value.role === 'ADMIN')
 const onAdminRoute = computed(() => path.value.startsWith(ROUTES.admin))
 const onPositionsRoute = computed(() => path.value.startsWith(ROUTES.positions))
 const onCompaniesRoute = computed(() => path.value.startsWith(ROUTES.companies))
+const onPluginRoute = computed(() => path.value === ROUTES.plugin)
 /** 다른 화면에서 열어 달라고 넘긴 항목 id. 각 보드가 목록을 읽은 뒤 그 드로어를 연다. */
 const focusId = computed(() => new URLSearchParams(search.value).get(FOCUS_QUERY))
 
 function syncPath() {
+  menuOpen.value = false
   path.value = window.location.pathname
   search.value = window.location.search
 }
 
 /** focus 를 주면 그 화면이 해당 항목의 드로어를 열고 시작한다. */
 function navigate(next: string, focus?: string) {
+  menuOpen.value = false
   const url = focus ? `${next}?${FOCUS_QUERY}=${focus}` : next
   if (window.location.pathname + window.location.search !== url) {
     window.history.pushState({}, '', url)
@@ -65,11 +73,13 @@ async function signOut() {
 }
 
 onMounted(() => {
+  window.addEventListener('keydown', menuKey)
   window.addEventListener('popstate', syncPath)
   loadMe()
 })
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', menuKey)
   window.removeEventListener('popstate', syncPath)
 })
 </script>
@@ -86,7 +96,7 @@ onUnmounted(() => {
       <nav v-if="me.authenticated" class="segmented" aria-label="화면 전환">
         <button
           type="button"
-          :class="{ active: !onAdminRoute && !onPositionsRoute && !onCompaniesRoute }"
+          :class="{ active: !onAdminRoute && !onPositionsRoute && !onCompaniesRoute && !onPluginRoute }"
           @click="navigate(ROUTES.home)"
         >
           채용공고
@@ -101,21 +111,24 @@ onUnmounted(() => {
       <span v-else />
 
       <div class="topbar-actions">
+        <button ref="menuButton" type="button" class="button secondary compact" :aria-expanded="menuOpen" aria-controls="site-menu"
+          @click="menuOpen = !menuOpen">☰ 메뉴</button>
         <template v-if="me.authenticated">
-          <button
-            v-if="isAdmin"
-            type="button"
-            class="button secondary compact"
-            @click="navigate(onAdminRoute ? ROUTES.home : ROUTES.admin)"
-          >
-            {{ onAdminRoute ? '워크스페이스' : '관리자' }}
-          </button>
           <UserMenu :me="me" @updated="me = $event" @signed-out="signOut" />
         </template>
       </div>
     </header>
 
-    <main v-if="booting" class="page">
+    <aside v-if="menuOpen" id="site-menu" class="site-menu" aria-label="사이트 메뉴">
+      <div class="site-menu__head"><strong>메뉴</strong><button class="icon-button" type="button" aria-label="메뉴 닫기" @click="closeMenu">×</button></div>
+      <nav aria-label="추가 메뉴">
+        <button type="button" :aria-current="onPluginRoute ? 'page' : undefined" @click="navigate(ROUTES.plugin)">플러그인 연결 가이드</button>
+        <button v-if="isAdmin" type="button" :aria-current="onAdminRoute ? 'page' : undefined" @click="navigate(ROUTES.admin)">관리자</button>
+      </nav>
+    </aside>
+
+    <PluginGuide v-if="onPluginRoute" />
+    <main v-else-if="booting" class="page">
       <div class="loading-card" aria-live="polite">
         <span class="spinner" /> 세션을 확인하는 중입니다.
       </div>

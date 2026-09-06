@@ -47,3 +47,10 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+tasks.named('processResources') {
+    from('../plugins/jobsight') {
+        include '.codex-plugin/plugin.json', '.mcp.json', 'skills/jobsight/SKILL.md'
+        into 'jobsight-plugin'
+    }
+}

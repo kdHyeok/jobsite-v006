@@ -41,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = "app.public-base-url=http://127.0.0.1:8088")
 class McpOAuthTest {
     @Configuration @EnableWebMvc @EnableWebSecurity
-    @Import({McpOAuthConfig.class, McpController.class})
+    @Import({McpOAuthConfig.class, McpController.class, PluginGuideController.class})
     static class Config {
         @Bean AppUserRepository users() { return mock(AppUserRepository.class); }
         @Bean McpTools tools() { return mock(McpTools.class); }
@@ -69,6 +69,7 @@ class McpOAuthTest {
         mvc.perform(get(ApiPaths.MCP_METADATA)).andExpect(status().isOk()).andExpect(jsonPath("$.resource").value(RESOURCE));
         mvc.perform(get(ApiPaths.OAUTH_METADATA)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.issuer").value("http://127.0.0.1:8088"))
+                .andExpect(jsonPath("$.client_id_metadata_document_supported").value(true))
                 .andExpect(jsonPath("$.code_challenge_methods_supported[0]").value("S256"));
         mvc.perform(post(ApiPaths.MCP).session(session()).contentType("application/json")
                 .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
@@ -107,6 +108,60 @@ class McpOAuthTest {
         mvc.perform(post(ApiPaths.MCP_TOKEN).param("grant_type", "authorization_code")
                 .param("client_id", "jobsight-plugin").param("redirect_uri", CALLBACK).param("code", code)
                 .param("code_verifier", verifier).param("resource", RESOURCE)).andExpect(status().isBadRequest());
+    }
+
+    @Test void packagedGuideDownloadAndMcpInstructionsUseTheSameSkill() throws Exception {
+        mvc.perform(get(ApiPaths.PLUGIN_CONFIG)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.mcpUrl").value(RESOURCE));
+        var skill = mvc.perform(get(ApiPaths.PLUGIN_SKILL)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(skill).contains("position_replace_references", "company_content_create");
+        var download = mvc.perform(get(ApiPaths.PLUGIN_DOWNLOAD)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        var entries = new HashMap<String, String>();
+        try (var zip = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(download))) {
+            for (var entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry())
+                entries.put(entry.getName(), new String(zip.readAllBytes(), StandardCharsets.UTF_8));
+        }
+        assertThat(entries).hasSize(3);
+        assertThat(entries.get("skills/jobsight/SKILL.md")).isEqualTo(skill);
+        assertThat(mapper.readTree(entries.get(".mcp.json")).at("/mcpServers/jobsight/url").asText()).isEqualTo(RESOURCE);
+        var controller = new McpController(tools, context.getBean(McpOAuthConfig.class), mapper);
+        var authentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                new McpPrincipal(account.getId(), Set.of(McpOAuthConfig.READ)), null, List.of());
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+            var init = controller.rpc(Map.of("jsonrpc", "2.0", "id", 1, "method", "initialize"), null);
+            assertThat(mapper.valueToTree(init.getBody()).at("/result/instructions").asText()).isEqualTo(skill);
+            var resource = controller.rpc(Map.of("jsonrpc", "2.0", "id", 2, "method", "resources/read",
+                    "params", Map.of("uri", PluginGuideController.SKILL_URI)), null);
+            assertThat(mapper.valueToTree(resource.getBody()).at("/result/contents/0/text").asText()).isEqualTo(skill);
+        } finally { org.springframework.security.core.context.SecurityContextHolder.clearContext(); }
+    }
+
+    @Test void cimdClientCompletesSpringPkceFlow() throws Exception {
+        var resolver = new ChatGptClients(McpCimdTest.manual(), url -> McpCimdTest.document(), java.time.Clock.systemUTC());
+        var client = resolver.findByClientId(McpCimdTest.CLIENT);
+        clients.save(client); // verified remote document fixture; production resolves via the same repository contract
+        consents.save(OAuth2AuthorizationConsent.withId(client.getId(), account.getId().toString())
+                .scope(McpOAuthConfig.READ).build());
+        String verifier = "b".repeat(64);
+        String challenge = Base64.getUrlEncoder().withoutPadding().encodeToString(
+                MessageDigest.getInstance("SHA-256").digest(verifier.getBytes(StandardCharsets.US_ASCII)));
+        var response = mvc.perform(get(ApiPaths.MCP_AUTHORIZE).session(session())
+                .queryParam("response_type", "code").queryParam("client_id", McpCimdTest.CLIENT)
+                .queryParam("redirect_uri", McpCimdTest.CALLBACK).queryParam("scope", McpOAuthConfig.READ)
+                .queryParam("state", "cimd-test").queryParam("resource", RESOURCE)
+                .queryParam("code_challenge", challenge).queryParam("code_challenge_method", "S256"))
+                .andExpect(status().is3xxRedirection()).andReturn().getResponse();
+        var query = UriComponentsBuilder.fromUri(URI.create(response.getRedirectedUrl())).build().getQueryParams();
+        assertThat(query.getFirst("state")).isEqualTo("cimd-test");
+        var exchanged = mvc.perform(post(ApiPaths.MCP_TOKEN).param("grant_type", "authorization_code")
+                .param("client_id", McpCimdTest.CLIENT).param("redirect_uri", McpCimdTest.CALLBACK)
+                .param("code", query.getFirst("code")).param("code_verifier", verifier).param("resource", RESOURCE))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        String token = mapper.readTree(exchanged.getContentAsString()).get("access_token").asText();
+        mvc.perform(post(ApiPaths.MCP).header("Authorization", "Bearer " + token).contentType("application/json")
+                .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.result.capabilities.resources").exists());
     }
     @Test void consentAndInvalidPkceResourceRedirect() throws Exception {
         mvc.perform(get(ApiPaths.MCP_AUTHORIZE).session(session())
