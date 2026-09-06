@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import {
   ApiClientError,
   createCompany,
@@ -14,6 +14,9 @@ import CompanyList from './CompanyList.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import Drawer from './Drawer.vue'
 import type { Company, CompanyPayload } from '../types/company'
+
+/** 다른 화면이 열어 달라고 넘긴 기업. 목록에서만 찾는다(기업엔 보관 개념이 없다). */
+const props = withDefaults(defineProps<{ focus?: string | null }>(), { focus: null })
 
 /** 기업 상세의 채용정보를 더블클릭했을 때. 라우팅은 App 이 한다. */
 const emit = defineEmits<{ openPosting: [postingId: string] }>()
@@ -117,7 +120,17 @@ async function remove() {
   }
 }
 
-onMounted(load)
+function applyFocus() {
+  const found = companies.value.find((company) => company.id === props.focus)
+  if (found) open(found)
+}
+
+watch(() => props.focus, applyFocus)
+
+onMounted(async () => {
+  await load()
+  applyFocus()
+})
 </script>
 
 <template>

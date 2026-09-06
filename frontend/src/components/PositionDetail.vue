@@ -17,15 +17,24 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   attach: [referenceId: string]
+  /** 이 직무에서만 뗀다. 참고 정보 자체는 남는다. */
   detach: [referenceId: string]
   create: [payload: ReferencePayload]
+  update: [referenceId: string, payload: ReferencePayload]
+  /** 참고 정보를 아예 지운다 — 붙어 있는 모든 직무에서 사라진다. 확인은 부모가 받는다. */
+  remove: [item: ReferenceItem]
   /** 참고 직무 카드에서 그 직무로 건너뛴다. 같은 화면이라 라우팅은 없다. */
   openPosition: [positionId: string]
+  /** 역방향 — 이 직무가 속한 채용공고로 건너뛴다. */
+  openPosting: [postingId: string]
 }>()
 
-const picker = ref<'closed' | 'search' | 'new'>('closed')
+/** 만들기와 수정이 같은 폼을 쓴다. editingId 가 있으면 수정. */
+const picker = ref<'closed' | 'search' | 'form'>('closed')
+const editingId = ref<string | null>(null)
 const query = ref('')
-const draft = ref<ReferencePayload>({ kind: 'ARTICLE', title: '', url: '', memo: '', relatedPositionId: null })
+const emptyDraft = (): ReferencePayload => ({ kind: 'ARTICLE', title: '', url: '', memo: '', relatedPositionId: null })
+const draft = ref<ReferencePayload>(emptyDraft())
 
 const attachedIds = computed(() => new Set(props.position.references.map((r) => r.id)))
 
@@ -40,8 +49,21 @@ const candidates = computed(() => {
 const otherPositions = computed(() => props.allPositions.filter((p) => p.id !== props.position.id))
 
 function openNew() {
-  draft.value = { kind: 'ARTICLE', title: '', url: '', memo: '', relatedPositionId: null }
-  picker.value = 'new'
+  editingId.value = null
+  draft.value = emptyDraft()
+  picker.value = 'form'
+}
+
+function openEdit(item: ReferenceItem) {
+  editingId.value = item.id
+  draft.value = {
+    kind: item.kind,
+    title: item.title,
+    url: item.url ?? '',
+    memo: item.memo ?? '',
+    relatedPositionId: item.relatedPositionId,
+  }
+  picker.value = 'form'
 }
 
 function onRelatedChange(id: string) {
@@ -53,9 +75,11 @@ function onRelatedChange(id: string) {
   }
 }
 
-function submitNew() {
+function submitForm() {
   if (!draft.value.title.trim()) return
-  emit('create', { ...draft.value, title: draft.value.title.trim() })
+  const payload = { ...draft.value, title: draft.value.title.trim() }
+  if (editingId.value) emit('update', editingId.value, payload)
+  else emit('create', payload)
   picker.value = 'closed'
 }
 
@@ -79,7 +103,20 @@ const sections: Array<[keyof Position, string]> = [
 
     <section class="detail-section">
       <dl class="detail-facts">
-        <div><dt>공고</dt><dd>{{ position.postingTitle ?? '—' }}</dd></div>
+        <div>
+          <dt>공고</dt>
+          <dd>
+            <button
+              v-if="position.postingTitle"
+              type="button"
+              class="link-button"
+              @click="emit('openPosting', position.postingId)"
+            >
+              {{ position.postingTitle }} ↗
+            </button>
+            <span v-else>—</span>
+          </dd>
+        </div>
         <div><dt>서류마감</dt><dd>{{ formatDeadline(position.deadlineAt) }}</dd></div>
         <div><dt>소속 팀</dt><dd>{{ position.team || '—' }}</dd></div>
         <div><dt>담당 역할</dt><dd>{{ position.role || '—' }}</dd></div>
@@ -94,7 +131,7 @@ const sections: Array<[keyof Position, string]> = [
         <p class="label">참고 정보 · {{ position.references.length }}</p>
         <div class="strip-tools">
           <button type="button" class="button ghost compact" :disabled="busy" @click="picker = picker === 'search' ? 'closed' : 'search'">기존에서 검색</button>
-          <button type="button" class="button ghost compact" :disabled="busy" @click="picker === 'new' ? (picker = 'closed') : openNew()">새로 만들기</button>
+          <button type="button" class="button ghost compact" :disabled="busy" @click="picker === 'form' ? (picker = 'closed') : openNew()">새로 만들기</button>
         </div>
       </div>
 
@@ -112,7 +149,7 @@ const sections: Array<[keyof Position, string]> = [
         </div>
       </div>
 
-      <form v-if="picker === 'new'" class="picker form-grid" @submit.prevent="submitNew">
+      <form v-if="picker === 'form'" class="picker form-grid" @submit.prevent="submitForm">
         <label class="field">
           <span>종류</span>
           <select v-model="draft.kind">
@@ -140,7 +177,9 @@ const sections: Array<[keyof Position, string]> = [
         </label>
         <div class="full picker__actions">
           <button type="button" class="button secondary compact" @click="picker = 'closed'">취소</button>
-          <button type="submit" class="button primary compact" :disabled="busy || !draft.title.trim()">만들고 붙이기</button>
+          <button type="submit" class="button primary compact" :disabled="busy || !draft.title.trim()">
+            {{ editingId ? '저장' : '만들고 붙이기' }}
+          </button>
         </div>
       </form>
 
@@ -161,7 +200,11 @@ const sections: Array<[keyof Position, string]> = [
               직무 열기
             </button>
             <span v-else />
-            <button type="button" class="button ghost compact" :disabled="busy" @click="emit('detach', item.id)">떼기</button>
+            <span class="strip-card__tools">
+              <button type="button" :disabled="busy" title="참고 정보를 고칩니다" @click="openEdit(item)">수정</button>
+              <button type="button" :disabled="busy" title="이 직무에서만 뗍니다. 참고 정보는 남습니다" @click="emit('detach', item.id)">떼기</button>
+              <button type="button" class="danger" :disabled="busy" title="붙어 있는 모든 직무에서 사라집니다" @click="emit('remove', item)">삭제</button>
+            </span>
           </div>
         </article>
       </div>

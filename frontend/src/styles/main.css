@@ -130,6 +130,9 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .detail-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin: 0; }
 .detail-facts dt { margin-bottom: 3px; color: var(--muted); font-size: 12px; }
 .detail-facts dd { margin: 0; font-weight: 500; }
+/* 링크처럼 보이지만 화면 안 이동이라 <a> 가 아니다. */
+.link-button { padding: 0; color: var(--primary); font: inherit; font-weight: 500; text-align: left; }
+.link-button:hover { text-decoration: underline; }
 .detail-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* 드로어 안에 겹쳐 놓는 미니 목록(기업 상세의 채용정보) */
@@ -249,11 +252,16 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .picker.form-grid { grid-template-columns: 1fr 1fr; }
 .picker__actions { display: flex; justify-content: flex-end; gap: 6px; }
 .strip { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 8px; scroll-snap-type: x proximity; }
-.strip-card { flex: 0 0 220px; display: grid; gap: 6px; align-content: start; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); scroll-snap-align: start; }
+.strip-card { flex: 0 0 240px; display: grid; gap: 6px; align-content: start; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); scroll-snap-align: start; }
 .strip-card .chip { justify-self: start; }
 .strip-card strong { font-size: 13px; line-height: 1.4; }
 .strip-card__memo { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.strip-card__foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; font-size: 12px; }
+.strip-card__foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-top: 4px; font-size: 12px; }
+/* 카드가 좁아 .button 을 쓰면 넘친다. 수정·떼기·삭제는 글자만. */
+.strip-card__tools { display: flex; gap: 2px; }
+.strip-card__tools button { padding: 2px 6px; border-radius: var(--radius-sm); color: var(--muted); font-size: 12px; }
+.strip-card__tools button:hover:not(:disabled) { background: var(--surface-sunken); color: var(--text); }
+.strip-card__tools button.danger:hover:not(:disabled) { background: var(--negative-soft); color: var(--negative); }
 .mini-row:disabled { opacity: .6; }
 
 @media (max-width: 720px) {

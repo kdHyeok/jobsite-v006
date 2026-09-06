@@ -15,6 +15,8 @@ const emit = defineEmits<{
   changeStep: [seq: number, result: StepResult]
   /** 모집 직무 행을 더블클릭하면 모집 직무 화면에서 그 직무를 연다. */
   openPosition: [positionId: string]
+  /** 역방향 — 이 공고를 낸 기업으로 건너뛴다. */
+  openCompany: [companyId: string]
 }>()
 
 const formatDate = (value: string | null) =>
@@ -56,6 +58,14 @@ const formatDate = (value: string | null) =>
 
     <section class="detail-section">
       <dl class="detail-facts">
+        <div>
+          <dt>고용회사</dt>
+          <dd>
+            <button type="button" class="link-button" @click="emit('openCompany', posting.companyId)">
+              {{ posting.companyName ?? '회사 미입력' }} ↗
+            </button>
+          </dd>
+        </div>
         <div>
           <dt>서류마감</dt>
           <dd>{{ formatDeadline(posting.deadlineAt) }}</dd>

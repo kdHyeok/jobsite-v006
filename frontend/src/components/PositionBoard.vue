@@ -7,7 +7,7 @@ import {
   replacePositionReferences,
   updatePosition,
 } from '../api/positions'
-import { createReference, listReferences } from '../api/references'
+import { createReference, deleteReference, listReferences, updateReference } from '../api/references'
 import ConfirmDialog from './ConfirmDialog.vue'
 import Drawer from './Drawer.vue'
 import PositionDetail from './PositionDetail.vue'
@@ -16,6 +16,9 @@ import type { Position, PositionPayload, ReferenceItem, ReferencePayload } from 
 import { ddayLabel, ddayTone } from '../types/posting'
 
 const props = defineProps<{ focus: string | null }>()
+
+/** 역방향 — 직무 상세에서 소속 공고로 건너뛴다. 라우팅은 App 이 한다. */
+const emit = defineEmits<{ openPosting: [postingId: string] }>()
 
 type Mode = 'view' | 'edit'
 
@@ -32,6 +35,9 @@ const saving = ref(false)
 const formErrors = ref<Record<string, string>>({})
 const deleteTarget = ref<Position | null>(null)
 const deleting = ref(false)
+/** 참고 정보 삭제는 여러 직무에 영향을 주므로 따로 확인받는다. */
+const referenceDeleteTarget = ref<ReferenceItem | null>(null)
+const deletingReference = ref(false)
 
 /** 검색은 클라이언트 필터. 이름·회사·공고·팀·스택. 수백 건을 넘으면 서버 ?q= 로. */
 const visible = computed(() => {
@@ -123,6 +129,41 @@ const attach = (id: string) =>
   setReferences([...(selected.value?.references.map((r) => r.id) ?? []), id])
 const detach = (id: string) =>
   setReferences((selected.value?.references ?? []).map((r) => r.id).filter((x) => x !== id))
+
+/** 참고 정보를 고치면 그 정보가 붙은 모든 직무의 표시가 바뀐다. 목록을 다시 읽는다. */
+async function editReference(id: string, payload: ReferencePayload) {
+  saving.value = true
+  notice.value = ''
+  try {
+    await updateReference(id, payload)
+    await loadReferences()
+    await load()
+    notice.value = '참고 정보를 수정했습니다.'
+  } catch (error) {
+    fail(error, '참고 정보를 수정하지 못했습니다.')
+  } finally {
+    saving.value = false
+  }
+}
+
+/** 붙어 있던 모든 직무에서 함께 떨어진다(position_references ON DELETE CASCADE). */
+async function removeReference() {
+  if (!referenceDeleteTarget.value) return
+  deletingReference.value = true
+  notice.value = ''
+  try {
+    await deleteReference(referenceDeleteTarget.value.id)
+    referenceDeleteTarget.value = null
+    await loadReferences()
+    await load()
+    notice.value = '참고 정보를 삭제했습니다.'
+  } catch (error) {
+    referenceDeleteTarget.value = null
+    fail(error, '참고 정보를 삭제하지 못했습니다.')
+  } finally {
+    deletingReference.value = false
+  }
+}
 
 async function createAndAttach(payload: ReferencePayload) {
   saving.value = true
@@ -229,7 +270,10 @@ onMounted(async () => {
       @attach="attach"
       @detach="detach"
       @create="createAndAttach"
+      @update="editReference"
+      @remove="referenceDeleteTarget = $event"
       @open-position="openById"
+      @open-posting="emit('openPosting', $event)"
     />
   </Drawer>
 
@@ -247,6 +291,17 @@ onMounted(async () => {
     </template>
     <PositionForm :position="selected" :saving="saving" :api-field-errors="formErrors" @submit="save" />
   </Drawer>
+
+  <ConfirmDialog
+    v-if="referenceDeleteTarget"
+    title="참고 정보를 삭제할까요?"
+    :subject="referenceDeleteTarget.title"
+    detail=" 이(가) 붙어 있는 모든 직무에서 사라집니다. 이 직무에서만 빼려면 ‘떼기’ 를 쓰세요."
+    aria-label="참고 정보 삭제 확인"
+    :busy="deletingReference"
+    @confirm="removeReference"
+    @cancel="referenceDeleteTarget = null"
+  />
 
   <ConfirmDialog
     v-if="deleteTarget"

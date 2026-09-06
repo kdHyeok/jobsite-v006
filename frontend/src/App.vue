@@ -144,10 +144,15 @@ onUnmounted(() => {
       </main>
     </template>
 
-    <PositionBoard v-else-if="onPositionsRoute" :focus="focusId" />
+    <PositionBoard
+      v-else-if="onPositionsRoute"
+      :focus="focusId"
+      @open-posting="navigate(ROUTES.home, $event)"
+    />
 
     <CompanyWorkspace
       v-else-if="onCompaniesRoute"
+      :focus="focusId"
       @open-posting="navigate(ROUTES.home, $event)"
     />
 
@@ -155,6 +160,7 @@ onUnmounted(() => {
       v-else
       :focus="focusId"
       @open-position="navigate(ROUTES.positions, $event)"
+      @open-company="navigate(ROUTES.companies, $event)"
     />
   </div>
 </template>

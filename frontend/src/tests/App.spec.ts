@@ -40,6 +40,7 @@ vi.mock('../api/postings', () => {
     ApiClientError,
     listPostings: vi.fn(() => Promise.resolve([])),
     listArchivedPostings: vi.fn(() => Promise.resolve([])),
+    getPosting: vi.fn(),
     createPosting: vi.fn(),
     updatePosting: vi.fn(),
     changePostingStatus: vi.fn(),

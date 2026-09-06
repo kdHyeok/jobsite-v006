@@ -91,6 +91,15 @@ describe('CompanyWorkspace', () => {
     expect(drawer.text()).toContain('백엔드 엔지니어')
   })
 
+  /** 역방향으로 건너온 기업은 목록을 읽자마자 드로어가 열려 있어야 한다. */
+  it('focus 로 넘어온 기업의 드로어를 열고 시작한다', async () => {
+    const wrapper = mount(CompanyWorkspace, { props: { focus: company.id } })
+    await flushPromises()
+
+    expect(api.getCompany).toHaveBeenCalledWith(company.id)
+    expect(wrapper.get('.drawer').text()).toContain('루멘 로보틱스 데모')
+  })
+
   /** 종속 데이터를 더블클릭하면 그 데이터의 화면이 열린다. 라우팅은 App 이 한다. */
   it('상세의 채용정보 행을 더블클릭하면 공고 열기를 요청한다', async () => {
     const wrapper = mount(CompanyWorkspace)

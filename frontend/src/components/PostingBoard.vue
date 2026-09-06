@@ -7,6 +7,7 @@ import {
   changeStepResult,
   createPosting,
   deletePosting,
+  getPosting,
   listArchivedPostings,
   listPostings,
   setPostingArchived,
@@ -22,8 +23,11 @@ import type { ApplicationStatus, JobPosting, JobPostingPayload, StepResult } fro
 
 const props = defineProps<{ focus: string | null }>()
 
-/** 모집 직무 행을 더블클릭했을 때. 라우팅은 App 이 한다. */
-const emit = defineEmits<{ openPosition: [positionId: string] }>()
+/** 다른 화면으로 건너뛸 때. 라우팅은 App 이 한다. */
+const emit = defineEmits<{
+  openPosition: [positionId: string]
+  openCompany: [companyId: string]
+}>()
 
 /** 드로어 하나가 보기·수정·추가를 모두 맡는다 — docs/design-system.md 규칙 4. */
 type Mode = 'view' | 'edit' | 'create'
@@ -170,9 +174,19 @@ async function remove() {
 }
 
 /** 다른 화면이 넘긴 항목을 연다. 목록을 읽은 뒤에만 의미가 있다. */
-function applyFocus() {
+async function applyFocus() {
+  if (!props.focus) return
   const found = postings.value.find((posting) => posting.id === props.focus)
-  if (found) open(found)
+  if (found) {
+    open(found)
+    return
+  }
+  // 진행 중 목록에 없으면 보관된 공고다. 직접 읽어 드로어만 연다.
+  try {
+    open(await getPosting(props.focus))
+  } catch {
+    // 지워졌거나 남의 공고. 조용히 넘어간다.
+  }
 }
 
 watch(tab, () => {
@@ -253,6 +267,7 @@ onMounted(async () => {
       @change-status="changeStatus"
       @change-step="changeStep"
       @open-position="emit('openPosition', $event)"
+      @open-company="emit('openCompany', $event)"
     />
   </Drawer>
 
