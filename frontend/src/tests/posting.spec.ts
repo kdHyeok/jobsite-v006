@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { daysUntil, ddayLabel, ddayTone, formatDeadline, toLocalInput, toUtcIso } from '../types/posting'
+import { daysUntil, ddayLabel, ddayTone, formatDeadline, nextStepResult, toLocalInput, toUtcIso } from '../types/posting'
 
 // 서버는 D-day 를 내려주지 않는다. 이 계산이 정렬 표기의 전부라서 여기만 지키면 된다.
 const now = new Date(2026, 8, 4, 10, 0) // 2026-09-04 10:00 로컬
@@ -41,5 +41,14 @@ describe('마감 시각 변환', () => {
 
   it('마감 시각을 2026.09.10 18:00 꼴로 보여준다', () => {
     expect(formatDeadline(new Date(2026, 8, 10, 18, 0).toISOString())).toBe('2026.09.10 18:00')
+  })
+})
+
+describe('절차 결과 순환', () => {
+  it('예정 → 진행 중 → 통과 → 탈락 → 예정', () => {
+    expect(nextStepResult('UPCOMING')).toBe('IN_PROGRESS')
+    expect(nextStepResult('IN_PROGRESS')).toBe('PASSED')
+    expect(nextStepResult('PASSED')).toBe('FAILED')
+    expect(nextStepResult('FAILED')).toBe('UPCOMING')
   })
 })

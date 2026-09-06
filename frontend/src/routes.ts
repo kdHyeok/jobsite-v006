@@ -8,10 +8,11 @@
  * nginx 프록시 접두사: frontend/nginx.conf 상단 표
  */
 
-/** SPA 라우트. App.vue 가 pathname 으로 분기한다. */
+/** SPA 라우트. App.vue 가 pathname 으로 분기한다. 홈은 채용공고. */
 export const ROUTES = {
   home: '/',
-  postings: '/postings',
+  positions: '/positions',
+  companies: '/companies',
   admin: '/admin',
 } as const
 
@@ -24,8 +25,14 @@ export const API = {
   company: (id: string) => `/api/companies/${id}`,
   postings: '/api/postings',
   posting: (id: string) => `/api/postings/${id}`,
-  postingStage: (id: string) => `/api/postings/${id}/stage`,
+  postingStatus: (id: string) => `/api/postings/${id}/status`,
+  postingStep: (id: string, seq: number) => `/api/postings/${id}/steps/${seq}`,
   postingArchive: (id: string) => `/api/postings/${id}/archive`,
+  positions: '/api/positions',
+  position: (id: string) => `/api/positions/${id}`,
+  positionReferences: (id: string) => `/api/positions/${id}/references`,
+  references: '/api/references',
+  reference: (id: string) => `/api/references/${id}`,
   adminUsers: '/api/admin/users',
   adminUser: (id: string) => `/api/admin/users/${id}`,
   adminUserStatus: (id: string) => `/api/admin/users/${id}/status`,
@@ -36,6 +43,13 @@ export const API = {
 
 /** Spring Security 가 소유하는 경로. 브라우저 네비게이션으로만 쓴다(fetch 금지). */
 export const GOOGLE_LOGIN_URL = '/oauth2/authorization/google'
+
+/**
+ * 다른 화면의 항목을 열어 달라고 넘기는 쿼리 파라미터.
+ * 드로어 안의 종속 데이터를 더블클릭하면 `/positions?focus=<id>` 처럼 이동한다.
+ * 링크로 공유·북마크할 수 있게 URL 에 남긴다.
+ */
+export const FOCUS_QUERY = 'focus'
 
 /** Google 로그인 실패 시 백엔드가 붙여 돌려보내는 쿼리 파라미터 이름. */
 export const AUTH_ERROR_QUERY = 'authError'

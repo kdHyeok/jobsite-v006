@@ -117,6 +117,14 @@ public class Company {
         updatedAt = Instant.now();
     }
 
+    /**
+     * 직접 입력한 회사명으로 기존 기업을 찾는 키. 공백 제거 + 소문자.
+     * V10 의 unique index companies_owner_name_key 와 같은 규칙이어야 한다.
+     */
+    public static String nameKey(String name) {
+        return name.replace(" ", "").toLowerCase(java.util.Locale.ROOT);
+    }
+
     public UUID getId() { return id; }
     public UUID getOwnerId() { return ownerId; }
     public String getName() { return name; }

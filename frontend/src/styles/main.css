@@ -120,7 +120,6 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .drawer__head h2 { font-size: 18px; }
 .drawer__subtitle { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 .drawer__body { flex: 1; overflow-y: auto; padding: 20px 24px; }
-.drawer__foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 24px; border-top: 1px solid var(--line); background: var(--surface); }
 
 /* ── 상세 본문 ────────────────────────────────────── */
 .detail-section { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
@@ -135,7 +134,8 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 
 /* 드로어 안에 겹쳐 놓는 미니 목록(기업 상세의 채용정보) */
 .mini-list { display: grid; gap: 8px; }
-.mini-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 10px 12px; text-align: left; background: var(--surface-sunken); border-radius: var(--radius); }
+/* 더블클릭으로 여는 행이라 글자가 선택되면 방해가 된다. */
+.mini-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 10px 12px; text-align: left; background: var(--surface-sunken); border-radius: var(--radius); user-select: none; }
 .mini-row:hover { background: var(--primary-soft); }
 .mini-row__text { min-width: 0; }
 .mini-row strong { display: block; font-size: 14px; font-weight: 600; }
@@ -208,4 +208,56 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
   .page { width: calc(100% - 32px); }
   .form-grid { grid-template-columns: 1fr; }
   .drawer { width: 100%; }
+}
+
+/* ── 드로어 헤더 액션 (푸터 없음) ────────────────── */
+.drawer__title { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.drawer__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+
+/* ── 절차 체인 [서류] → [인적성] → [면접] ───────── */
+.step-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.step-chain li { display: flex; align-items: center; gap: 4px; }
+.step-chain li + li::before { content: '→'; color: var(--line-strong); font-size: 14px; }
+.step-node { display: grid; gap: 2px; min-width: 88px; padding: 8px 12px; text-align: left; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); transition: border-color .12s, background-color .12s; }
+.step-node:hover { border-color: var(--primary); }
+.step-node strong { font-size: 13px; font-weight: 600; }
+.step-node span { font-size: 11px; color: var(--muted); }
+.step-node[data-result='IN_PROGRESS'] { border-color: var(--primary); background: var(--primary-soft); }
+.step-node[data-result='IN_PROGRESS'] span { color: var(--primary); }
+.step-node[data-result='PASSED'] { border-color: var(--positive); background: var(--positive-soft); }
+.step-node[data-result='PASSED'] span { color: var(--positive); }
+.step-node[data-result='FAILED'] { border-color: var(--negative); background: var(--negative-soft); color: var(--negative); }
+.step-node[data-result='FAILED'] span { color: var(--negative); }
+.label small { margin-left: 6px; font-weight: 400; }
+
+/* ── 폼 반복 입력 (직무·절차) ──────────────────── */
+.repeater { display: grid; gap: 8px; }
+.repeater__row { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
+.repeater__row--step { grid-template-columns: 24px 1fr 190px auto auto auto; }
+.repeater__row input { min-height: 36px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); }
+.repeater__seq { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--surface-sunken); color: var(--muted); font-size: 12px; font-weight: 600; }
+.repeater .button { justify-self: start; }
+
+/* ── 검색 ─────────────────────────────────────────── */
+.search { min-height: 36px; width: min(320px, 100%); padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); }
+.search:focus { border-color: var(--primary); }
+
+/* ── 참고 정보 가로 스트립 ────────────────────────── */
+.strip-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.strip-tools { display: flex; gap: 4px; }
+.picker { display: grid; gap: 10px; margin: 8px 0 12px; padding: 12px; background: var(--surface-sunken); border-radius: var(--radius); }
+.picker.form-grid { grid-template-columns: 1fr 1fr; }
+.picker__actions { display: flex; justify-content: flex-end; gap: 6px; }
+.strip { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 8px; scroll-snap-type: x proximity; }
+.strip-card { flex: 0 0 220px; display: grid; gap: 6px; align-content: start; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); scroll-snap-align: start; }
+.strip-card .chip { justify-self: start; }
+.strip-card strong { font-size: 13px; line-height: 1.4; }
+.strip-card__memo { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.strip-card__foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; font-size: 12px; }
+.mini-row:disabled { opacity: .6; }
+
+@media (max-width: 720px) {
+  .repeater__row--step { grid-template-columns: 24px 1fr auto auto auto; }
+  .repeater__row--step input[type='datetime-local'] { display: none; }
+  .picker.form-grid { grid-template-columns: 1fr; }
 }

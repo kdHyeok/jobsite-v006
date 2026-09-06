@@ -23,16 +23,15 @@ const posting: JobPosting = {
   id: '30000000-0000-0000-0000-000000000001',
   companyId: '10000000-0000-0000-0000-000000000001',
   companyName: '루멘 로보틱스 데모',
-  position: '백엔드 엔지니어',
+  title: '백엔드 엔지니어',
   postingUrl: null,
   employmentType: 'FULL_TIME',
   deadlineAt: '2099-09-10T09:00:00Z',
-  stage: 'INTERESTED',
-  headcount: '0명',
-  workLocation: '성남',
+  status: 'INTERESTED',
   qualifications: null,
-  responsibilities: null,
-  requiredSkills: null,
+  targetPositionId: null,
+  steps: [],
+  positions: [{ id: '40000000-0000-0000-0000-000000000001', name: '백엔드 엔지니어', team: null, headcount: null, workLocation: null }],
   archived: false,
   createdAt: '2026-08-04T00:00:00Z',
   updatedAt: '2026-08-04T00:00:00Z',
@@ -92,13 +91,28 @@ describe('CompanyWorkspace', () => {
     expect(drawer.text()).toContain('백엔드 엔지니어')
   })
 
+  /** 종속 데이터를 더블클릭하면 그 데이터의 화면이 열린다. 라우팅은 App 이 한다. */
+  it('상세의 채용정보 행을 더블클릭하면 공고 열기를 요청한다', async () => {
+    const wrapper = mount(CompanyWorkspace)
+    await flushPromises()
+    await wrapper.get('.card').trigger('click')
+    await flushPromises()
+
+    const row = wrapper.get('.drawer .mini-row')
+    expect(row.element.tagName).toBe('BUTTON')
+
+    await row.trigger('dblclick')
+
+    expect(wrapper.emitted('openPosting')?.[0]).toEqual([posting.id])
+  })
+
   it('드로어에서 수정을 누르면 같은 자리에서 폼으로 바뀐다', async () => {
     const wrapper = mount(CompanyWorkspace)
     await flushPromises()
     await wrapper.get('.card').trigger('click')
     await flushPromises()
 
-    await wrapper.get('.drawer__foot .secondary').trigger('click')
+    await wrapper.get('.drawer__actions .secondary').trigger('click')
 
     expect(wrapper.find('#company-form').exists()).toBe(true)
     expect(wrapper.findAll('.drawer')).toHaveLength(1)
@@ -112,7 +126,7 @@ describe('CompanyWorkspace', () => {
     await wrapper.get('.card').trigger('click')
     await flushPromises()
 
-    await wrapper.get('.drawer__foot .danger').trigger('click')
+    await wrapper.get('.drawer__actions .danger').trigger('click')
     await wrapper.get('.confirm-card .danger.solid').trigger('click')
     await flushPromises()
 

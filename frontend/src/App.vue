@@ -4,9 +4,10 @@ import { fetchMe, logout } from './api/auth'
 import AdminView from './components/AdminView.vue'
 import CompanyWorkspace from './components/CompanyWorkspace.vue'
 import LoginView from './components/LoginView.vue'
+import PositionBoard from './components/PositionBoard.vue'
 import PostingBoard from './components/PostingBoard.vue'
 import UserMenu from './components/UserMenu.vue'
-import { ROUTES } from './routes'
+import { FOCUS_QUERY, ROUTES } from './routes'
 import type { Me } from './types/auth'
 
 const ANONYMOUS: Me = { authenticated: false, id: null, email: null, displayName: null, role: null }
@@ -14,23 +15,31 @@ const ANONYMOUS: Me = { authenticated: false, id: null, email: null, displayName
 // 라우트가 몇 개(ROUTES)뿐이라 라우터 라이브러리를 두지 않았다.
 // nginx가 모든 경로에 index.html을 돌려주므로 pathname만 보면 된다.
 const path = ref(window.location.pathname)
+const search = ref(window.location.search)
 const me = ref<Me>(ANONYMOUS)
 const booting = ref(true)
 const bootError = ref('')
 
 const isAdmin = computed(() => me.value.role === 'ADMIN')
 const onAdminRoute = computed(() => path.value.startsWith(ROUTES.admin))
-const onPostingsRoute = computed(() => path.value.startsWith(ROUTES.postings))
+const onPositionsRoute = computed(() => path.value.startsWith(ROUTES.positions))
+const onCompaniesRoute = computed(() => path.value.startsWith(ROUTES.companies))
+/** 다른 화면에서 열어 달라고 넘긴 항목 id. 각 보드가 목록을 읽은 뒤 그 드로어를 연다. */
+const focusId = computed(() => new URLSearchParams(search.value).get(FOCUS_QUERY))
 
 function syncPath() {
   path.value = window.location.pathname
+  search.value = window.location.search
 }
 
-function navigate(next: string) {
-  if (window.location.pathname !== next) {
-    window.history.pushState({}, '', next)
+/** focus 를 주면 그 화면이 해당 항목의 드로어를 열고 시작한다. */
+function navigate(next: string, focus?: string) {
+  const url = focus ? `${next}?${FOCUS_QUERY}=${focus}` : next
+  if (window.location.pathname + window.location.search !== url) {
+    window.history.pushState({}, '', url)
   }
   path.value = next
+  search.value = focus ? `?${FOCUS_QUERY}=${focus}` : ''
 }
 
 async function loadMe() {
@@ -73,17 +82,20 @@ onUnmounted(() => {
         JobSight
       </button>
 
-      <!-- 세그먼트에는 성격이 같은 두 화면만 둔다. 관리자는 오른쪽에 따로. -->
+      <!-- 세그먼트에는 성격이 같은 세 화면만. 관리자는 오른쪽에 따로. -->
       <nav v-if="me.authenticated" class="segmented" aria-label="화면 전환">
         <button
           type="button"
-          :class="{ active: !onAdminRoute && !onPostingsRoute }"
+          :class="{ active: !onAdminRoute && !onPositionsRoute && !onCompaniesRoute }"
           @click="navigate(ROUTES.home)"
         >
-          기업
-        </button>
-        <button type="button" :class="{ active: onPostingsRoute }" @click="navigate(ROUTES.postings)">
           채용공고
+        </button>
+        <button type="button" :class="{ active: onPositionsRoute }" @click="navigate(ROUTES.positions)">
+          모집 직무
+        </button>
+        <button type="button" :class="{ active: onCompaniesRoute }" @click="navigate(ROUTES.companies)">
+          기업
         </button>
       </nav>
       <span v-else />
@@ -132,8 +144,17 @@ onUnmounted(() => {
       </main>
     </template>
 
-    <PostingBoard v-else-if="onPostingsRoute" />
+    <PositionBoard v-else-if="onPositionsRoute" :focus="focusId" />
 
-    <CompanyWorkspace v-else />
+    <CompanyWorkspace
+      v-else-if="onCompaniesRoute"
+      @open-posting="navigate(ROUTES.home, $event)"
+    />
+
+    <PostingBoard
+      v-else
+      :focus="focusId"
+      @open-position="navigate(ROUTES.positions, $event)"
+    />
   </div>
 </template>

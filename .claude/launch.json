@@ -1,0 +1,10 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "jobsite",
+      "port": 8088,
+      "url": "http://127.0.0.1:8088"
+    }
+  ]
+}

@@ -1,24 +1,57 @@
 <script setup lang="ts">
-import type { ApplicationStage, JobPosting } from '../types/posting'
-import { employmentTypeLabels, formatDeadline, stageLabels } from '../types/posting'
+import type { ApplicationStatus, JobPosting, StepResult } from '../types/posting'
+import {
+  employmentTypeLabels,
+  formatDeadline,
+  nextStepResult,
+  statusLabels,
+  stepResultLabels,
+} from '../types/posting'
 
-// 수정·보관·삭제 버튼은 드로어 하단이 가진다. 지원단계만 여기서 바로 바꾼다 — 가장 자주 하는 조작이라.
+// 수정·보관·삭제는 드로어 헤더가 가진다. 여기서 바로 바꾸는 건 내 상태와 절차 결과 — 가장 잦은 조작.
 defineProps<{ posting: JobPosting }>()
-const emit = defineEmits<{ changeStage: [ApplicationStage] }>()
+const emit = defineEmits<{
+  changeStatus: [ApplicationStatus]
+  changeStep: [seq: number, result: StepResult]
+  /** 모집 직무 행을 더블클릭하면 모집 직무 화면에서 그 직무를 연다. */
+  openPosition: [positionId: string]
+}>()
+
+const formatDate = (value: string | null) =>
+  value ? new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value)) : ''
 </script>
 
 <template>
   <div>
     <section class="detail-section">
       <label class="field">
-        <span>지원단계</span>
+        <span>내 상태</span>
         <select
-          :value="posting.stage"
-          @change="emit('changeStage', ($event.target as HTMLSelectElement).value as ApplicationStage)"
+          :value="posting.status"
+          @change="emit('changeStatus', ($event.target as HTMLSelectElement).value as ApplicationStatus)"
         >
-          <option v-for="(label, value) in stageLabels" :key="value" :value="value">{{ label }}</option>
+          <option v-for="(label, value) in statusLabels" :key="value" :value="value">{{ label }}</option>
         </select>
       </label>
+    </section>
+
+    <section class="detail-section">
+      <p class="label">채용 절차 <small>노드를 누르면 결과가 바뀝니다</small></p>
+      <p v-if="posting.steps.length === 0" class="body-copy empty">입력된 절차가 없습니다. 수정에서 추가하세요.</p>
+      <ol v-else class="step-chain">
+        <li v-for="step in posting.steps" :key="step.seq">
+          <button
+            type="button"
+            class="step-node"
+            :data-result="step.result"
+            :title="stepResultLabels[step.result]"
+            @click="emit('changeStep', step.seq, nextStepResult(step.result))"
+          >
+            <strong>{{ step.name }}</strong>
+            <span>{{ stepResultLabels[step.result] }}<template v-if="step.scheduledAt"> · {{ formatDate(step.scheduledAt) }}</template></span>
+          </button>
+        </li>
+      </ol>
     </section>
 
     <section class="detail-section">
@@ -32,14 +65,6 @@ const emit = defineEmits<{ changeStage: [ApplicationStage] }>()
           <dd>{{ employmentTypeLabels[posting.employmentType] }}</dd>
         </div>
         <div>
-          <dt>모집인원</dt>
-          <dd>{{ posting.headcount || '—' }}</dd>
-        </div>
-        <div>
-          <dt>근무지역</dt>
-          <dd>{{ posting.workLocation || '—' }}</dd>
-        </div>
-        <div>
           <dt>공고링크</dt>
           <dd>
             <a v-if="posting.postingUrl" :href="posting.postingUrl" target="_blank" rel="noreferrer">열기 ↗</a>
@@ -50,23 +75,30 @@ const emit = defineEmits<{ changeStage: [ApplicationStage] }>()
     </section>
 
     <section class="detail-section">
+      <p class="label">모집 직무 · {{ posting.positions.length }} <small>더블클릭하면 직무가 열립니다</small></p>
+      <div class="mini-list">
+        <button
+          v-for="position in posting.positions"
+          :key="position.id"
+          type="button"
+          class="mini-row"
+          title="더블클릭하면 모집 직무 화면에서 열립니다"
+          @dblclick="emit('openPosition', position.id)"
+          @keydown.enter.prevent="emit('openPosition', position.id)"
+        >
+          <span class="mini-row__text">
+            <strong>{{ position.name }}</strong>
+            <span>{{ [position.team, position.headcount, position.workLocation].filter(Boolean).join(' · ') || '상세는 모집 직무 탭에서' }}</span>
+          </span>
+          <span v-if="posting.targetPositionId === position.id" class="chip" data-tone="primary">지원</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="detail-section">
       <p class="label">지원자격</p>
       <p class="body-copy" :class="{ empty: !posting.qualifications }">
         {{ posting.qualifications || '미입력' }}
-      </p>
-    </section>
-
-    <section class="detail-section">
-      <p class="label">담당업무</p>
-      <p class="body-copy" :class="{ empty: !posting.responsibilities }">
-        {{ posting.responsibilities || '미입력' }}
-      </p>
-    </section>
-
-    <section class="detail-section">
-      <p class="label">요구역량</p>
-      <p class="body-copy" :class="{ empty: !posting.requiredSkills }">
-        {{ posting.requiredSkills || '미입력' }}
       </p>
     </section>
   </div>

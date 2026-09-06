@@ -1,29 +1,49 @@
 export type EmploymentType = 'FULL_TIME' | 'CONTRACT' | 'INTERN' | 'PART_TIME' | 'DISPATCH'
 
-export type ApplicationStage =
-  | 'INTERESTED'
-  | 'DRAFTING'
-  | 'SUBMITTED'
-  | 'CODING_TEST'
-  | 'INTERVIEW'
-  | 'AWAITING_RESULT'
+/** 내 참여 상태. 회사 절차(RecruitmentStep)와는 다른 축 — docs/job-postings.md. */
+export type ApplicationStatus = 'INTERESTED' | 'DRAFTING' | 'SUBMITTED' | 'CLOSED'
+
+export type StepResult = 'UPCOMING' | 'IN_PROGRESS' | 'PASSED' | 'FAILED'
+
+export interface RecruitmentStep {
+  seq: number
+  name: string
+  result: StepResult
+  scheduledAt: string | null
+  memo: string | null
+}
+
+export interface StepPayload {
+  name: string
+  result: StepResult
+  scheduledAt: string | null
+  memo: string
+}
+
+/** 공고 응답에 실리는 직무 요약. 상세는 /api/positions/{id}. */
+export interface PositionSummary {
+  id: string
+  name: string
+  team: string | null
+  headcount: string | null
+  workLocation: string | null
+}
 
 export interface JobPosting {
   id: string
-  companyId: string | null
-  /** 기업을 연결했으면 기업 이름, 아니면 직접 입력한 고용회사명. */
+  companyId: string
   companyName: string | null
-  position: string
+  /** 모집 부문. 공채 이름이거나 단일 직무 공고면 그 직무 이름. */
+  title: string
   postingUrl: string | null
   employmentType: EmploymentType
-  /** UTC ISO 문자열. null 이면 상시채용. */
+  /** UTC ISO. null 이면 상시채용. */
   deadlineAt: string | null
-  stage: ApplicationStage
-  headcount: string | null
-  workLocation: string | null
+  status: ApplicationStatus
   qualifications: string | null
-  responsibilities: string | null
-  requiredSkills: string | null
+  targetPositionId: string | null
+  steps: RecruitmentStep[]
+  positions: PositionSummary[]
   archived: boolean
   createdAt: string
   updatedAt: string
@@ -31,17 +51,17 @@ export interface JobPosting {
 
 export interface JobPostingPayload {
   companyId: string | null
+  /** companyId 가 없을 때만. 서버가 기존 기업을 찾거나 새로 만든다. */
   companyName: string
-  position: string
+  title: string
   postingUrl: string
   employmentType: EmploymentType
   deadlineAt: string | null
-  stage: ApplicationStage
-  headcount: string
-  workLocation: string
+  status: ApplicationStatus
   qualifications: string
-  responsibilities: string
-  requiredSkills: string
+  /** id 가 있으면 이름 갱신, 없으면 생성. 빠진 기존 직무는 삭제된다. 비우면 제목 이름의 직무 하나. */
+  positions: Array<{ id: string | null; name: string }>
+  steps: StepPayload[]
 }
 
 export const employmentTypeLabels: Record<EmploymentType, string> = {
@@ -52,24 +72,32 @@ export const employmentTypeLabels: Record<EmploymentType, string> = {
   DISPATCH: '파견직',
 }
 
-/** 선언 순서가 진행 정도를 뜻한다. 백엔드 ApplicationStage 와 같은 순서를 유지한다. */
-export const stageLabels: Record<ApplicationStage, string> = {
+export const statusLabels: Record<ApplicationStatus, string> = {
   INTERESTED: '관심',
   DRAFTING: '작성중',
   SUBMITTED: '지원완료',
-  CODING_TEST: '코테',
-  INTERVIEW: '면접',
-  AWAITING_RESULT: '결과대기',
+  CLOSED: '종료',
 }
 
-export const stageOrder: ApplicationStage[] = [
-  'INTERESTED',
-  'DRAFTING',
-  'SUBMITTED',
-  'CODING_TEST',
-  'INTERVIEW',
-  'AWAITING_RESULT',
-]
+export const statusTone: Record<ApplicationStatus, string> = {
+  INTERESTED: 'neutral',
+  DRAFTING: 'warning',
+  SUBMITTED: 'primary',
+  CLOSED: 'neutral',
+}
+
+export const stepResultLabels: Record<StepResult, string> = {
+  UPCOMING: '예정',
+  IN_PROGRESS: '진행 중',
+  PASSED: '통과',
+  FAILED: '탈락',
+}
+
+/** 절차 노드를 누르면 이 순서로 돈다. 탈락 뒤에는 예정으로 돌아간다. */
+const STEP_CYCLE: StepResult[] = ['UPCOMING', 'IN_PROGRESS', 'PASSED', 'FAILED']
+export function nextStepResult(current: StepResult): StepResult {
+  return STEP_CYCLE[(STEP_CYCLE.indexOf(current) + 1) % STEP_CYCLE.length]
+}
 
 /**
  * 남은 일수. 서버가 계산해 내려주지 않는다 — 사용자 시계로 계산해야 자정을 넘길 때 어긋나지 않는다.
@@ -90,7 +118,7 @@ export function ddayLabel(deadlineAt: string | null, now: Date = new Date()): st
   return days > 0 ? `D-${days}` : `마감 +${-days}`
 }
 
-/** 임박할수록 강한 색. 배지와 목록 점의 색조를 정한다. */
+/** 임박할수록 강한 색. */
 export function ddayTone(
   deadlineAt: string | null,
   now: Date = new Date(),
@@ -112,16 +140,13 @@ export function formatDeadline(deadlineAt: string | null): string {
     + `${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-/**
- * datetime-local 입력값(시간대 없음)을 UTC ISO 로. 사용자의 로컬 시간대로 해석한다.
- * 그대로 문자열로 보내면 서버가 UTC 로 오해한다.
- */
+/** datetime-local 입력값(시간대 없음)을 UTC ISO 로. 사용자의 로컬 시간대로 해석한다. */
 export function toUtcIso(localValue: string): string | null {
   if (!localValue) return null
   return new Date(localValue).toISOString()
 }
 
-/** UTC ISO -> datetime-local 입력값. 폼을 열 때 되돌린다. */
+/** UTC ISO -> datetime-local 입력값. */
 export function toLocalInput(deadlineAt: string | null): string {
   if (!deadlineAt) return ''
   const date = new Date(deadlineAt)

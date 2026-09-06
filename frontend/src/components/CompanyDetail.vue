@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { Company } from '../types/company'
 import { companySizeLabels, formatFoundedOn, formatRevenue } from '../types/company'
-import { ddayLabel, ddayTone, stageLabels } from '../types/posting'
+import { ddayLabel, ddayTone, statusLabels } from '../types/posting'
 
-// 수정·삭제 버튼은 드로어 하단이 가진다. 여기는 읽기 전용 본문.
+// 수정·삭제 버튼은 드로어 헤더가 가진다. 여기는 읽기 전용 본문.
 defineProps<{ company: Company }>()
+
+/** 채용정보 행을 더블클릭하면 채용공고 화면에서 그 공고를 연다. */
+const emit = defineEmits<{ openPosting: [postingId: string] }>()
 </script>
 
 <template>
@@ -53,16 +56,24 @@ defineProps<{ company: Company }>()
     </section>
 
     <section class="detail-section">
-      <p class="label">채용정보 · 마감 전 {{ company.openPostings.length }}건</p>
+      <p class="label">채용정보 · 마감 전 {{ company.openPostings.length }}건 <small>더블클릭하면 공고가 열립니다</small></p>
       <p v-if="company.openPostings.length === 0" class="body-copy empty">진행 중인 공고가 없습니다.</p>
       <div v-else class="mini-list">
-        <div v-for="posting in company.openPostings" :key="posting.id" class="mini-row">
+        <button
+          v-for="posting in company.openPostings"
+          :key="posting.id"
+          type="button"
+          class="mini-row"
+          title="더블클릭하면 채용공고 화면에서 열립니다"
+          @dblclick="emit('openPosting', posting.id)"
+          @keydown.enter.prevent="emit('openPosting', posting.id)"
+        >
           <span class="mini-row__text">
-            <strong>{{ posting.position }}</strong>
-            <span>{{ stageLabels[posting.stage] }}</span>
+            <strong>{{ posting.title }}</strong>
+            <span>{{ statusLabels[posting.status] }}<template v-if="posting.positions.length > 1"> · 직무 {{ posting.positions.length }}</template></span>
           </span>
           <span class="dday" :data-tone="ddayTone(posting.deadlineAt)">{{ ddayLabel(posting.deadlineAt) }}</span>
-        </div>
+        </button>
       </div>
     </section>
 

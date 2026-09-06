@@ -22,6 +22,8 @@ public final class ApiPaths {
     public static final String ADMIN = API + "/admin";
     public static final String COMPANIES = API + "/companies";
     public static final String POSTINGS = API + "/postings";
+    public static final String POSITIONS = API + "/positions";
+    public static final String REFERENCES = API + "/references";
 
     /** Spring Security OAuth2 클라이언트가 소유하는 경로. registrationId = google. */
     public static final String OAUTH_AUTHORIZATION = "/oauth2/authorization/google";
