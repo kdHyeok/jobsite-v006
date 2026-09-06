@@ -48,6 +48,13 @@ public class RecruitmentStep {
         this.result = result;
     }
 
+    public void updateFrom(RecruitmentStep source) {
+        this.name = source.name;
+        this.result = source.result;
+        this.scheduledAt = source.scheduledAt;
+        this.memo = source.memo;
+    }
+
     public UUID getId() { return id; }
     public String getName() { return name; }
     public StepResult getResult() { return result; }

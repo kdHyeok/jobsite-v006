@@ -13,14 +13,16 @@ public record CompanyAttributes(
         List<String> industries,
         CompanySize companySize,
         Long annualRevenue,
+        RevenueUnit revenueUnit,
         Integer employeeCount,
         String address,
         LocalDate foundedOn,
         String summary,
+        String benefits,
         String memo
 ) {
     /** 공고 폼에서 직접 입력한 회사명으로 만드는 최소 기업. 나머지는 기업 페이지에서 채운다. */
     public static CompanyAttributes nameOnly(String name) {
-        return new CompanyAttributes(name, null, java.util.List.of(), null, null, null, null, null, null, null);
+        return new CompanyAttributes(name, null, java.util.List.of(), null, null, null, null, null, null, null, null, null);
     }
 }

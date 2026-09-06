@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { listCompanies } from '../api/companies'
 import {
   ApiClientError,
@@ -19,7 +19,8 @@ import PostingCard from './PostingCard.vue'
 import PostingDetail from './PostingDetail.vue'
 import PostingForm from './PostingForm.vue'
 import type { Company } from '../types/company'
-import type { ApplicationStatus, JobPosting, JobPostingPayload, StepResult } from '../types/posting'
+import type { ApplicationStatus, JobPosting, JobPostingPayload, PostingTab, StepResult } from '../types/posting'
+import { groupPostingsByKanban, postingDropTarget, postingTabCounts } from '../types/posting'
 
 const props = defineProps<{ focus: string | null }>()
 
@@ -32,8 +33,9 @@ const emit = defineEmits<{
 /** 드로어 하나가 보기·수정·추가를 모두 맡는다 — docs/design-system.md 규칙 4. */
 type Mode = 'view' | 'edit' | 'create'
 
-const tab = ref<'open' | 'archived'>('open')
+const tab = ref<PostingTab>('interested')
 const postings = ref<JobPosting[]>([])
+const tabCounts = ref<Record<PostingTab, number>>({ interested: 0, progress: 0, archived: 0 })
 const companies = ref<Company[]>([])
 const loading = ref(true)
 const loadError = ref('')
@@ -45,13 +47,21 @@ const saving = ref(false)
 const formErrors = ref<Record<string, string>>({})
 const deleteTarget = ref<JobPosting | null>(null)
 const deleting = ref(false)
+const dragging = ref<JobPosting | null>(null)
+const dropOver = ref('')
+const movingId = ref<string | null>(null)
+
+const kanbanColumns = computed(() => groupPostingsByKanban(postings.value, tab.value))
+const visibleCount = computed(() => kanbanColumns.value.reduce((sum, column) => sum + column.postings.length, 0))
 
 /** 서버가 마감 임박 순으로 내려준다. 여기서 다시 정렬하면 두 곳이 어긋난다. */
 async function load() {
   loading.value = true
   loadError.value = ''
   try {
-    postings.value = tab.value === 'open' ? await listPostings() : await listArchivedPostings()
+    const [open, archived] = await Promise.all([listPostings(), listArchivedPostings()])
+    postings.value = tab.value === 'archived' ? archived : open
+    tabCounts.value = postingTabCounts(open, archived)
     if (selected.value) {
       selected.value = postings.value.find((posting) => posting.id === selected.value?.id) ?? selected.value
     }
@@ -156,6 +166,35 @@ async function toggleArchive() {
   }
 }
 
+function startDrag(posting: JobPosting, event: DragEvent) {
+  dragging.value = posting
+  event.dataTransfer?.setData('text/plain', posting.id)
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+}
+
+async function dropPosting(targetTab: PostingTab, columnKey?: string) {
+  const posting = dragging.value
+  dragging.value = null
+  dropOver.value = ''
+  if (!posting || movingId.value) return
+  movingId.value = posting.id
+  notice.value = ''
+  try {
+    const target = postingDropTarget(posting.status, targetTab, columnKey)
+    let moved = posting
+    if (moved.status !== target.status) moved = await changePostingStatus(moved.id, target.status)
+    if (moved.archived !== target.archived) moved = await setPostingArchived(moved.id, target.archived)
+    if (tab.value === targetTab) await load()
+    else tab.value = targetTab
+    notice.value = `${moved.title} 공고를 이동했습니다.`
+  } catch (error) {
+    fail(error, '공고를 이동하지 못했습니다.')
+    await load()
+  } finally {
+    movingId.value = null
+  }
+}
+
 async function remove() {
   if (!deleteTarget.value) return
   deleting.value = true
@@ -208,17 +247,19 @@ onMounted(async () => {
     <div class="page-head">
       <div class="page-title">
         <h1>채용공고</h1>
-        <span class="page-count">{{ postings.length }}</span>
       </div>
       <button type="button" class="button primary" @click="openCreate">공고 추가</button>
     </div>
 
     <div class="tabs" role="tablist" aria-label="공고 보기">
-      <button type="button" role="tab" :aria-selected="tab === 'open'" :class="{ active: tab === 'open' }" @click="tab = 'open'">
-        진행 중
+      <button type="button" role="tab" :aria-selected="tab === 'interested'" :class="{ active: tab === 'interested', 'drag-over': dropOver === 'tab-interested' }" @click="tab = 'interested'" @dragover.prevent="dropOver = 'tab-interested'" @dragleave="dropOver = ''" @drop.prevent="dropPosting('interested')">
+        관심 공고 <span class="tab-count">{{ tabCounts.interested }}</span>
       </button>
-      <button type="button" role="tab" :aria-selected="tab === 'archived'" :class="{ active: tab === 'archived' }" @click="tab = 'archived'">
-        보관함
+      <button type="button" role="tab" :aria-selected="tab === 'progress'" :class="{ active: tab === 'progress', 'drag-over': dropOver === 'tab-progress' }" @click="tab = 'progress'" @dragover.prevent="dropOver = 'tab-progress'" @dragleave="dropOver = ''" @drop.prevent="dropPosting('progress')">
+        진행 중 <span class="tab-count">{{ tabCounts.progress }}</span>
+      </button>
+      <button type="button" role="tab" :aria-selected="tab === 'archived'" :class="{ active: tab === 'archived', 'drag-over': dropOver === 'tab-archived' }" @click="tab = 'archived'" @dragover.prevent="dropOver = 'tab-archived'" @dragleave="dropOver = ''" @drop.prevent="dropPosting('archived')">
+        보관함 <span class="tab-count">{{ tabCounts.archived }}</span>
       </button>
     </div>
 
@@ -232,20 +273,37 @@ onMounted(async () => {
       <span class="spinner" /> 불러오는 중입니다.
     </section>
 
-    <section v-else-if="postings.length === 0" class="empty-state">
-      <strong>{{ tab === 'open' ? '진행 중인 공고가 없습니다.' : '보관된 공고가 없습니다.' }}</strong>
-      <p>마감이 지난 ‘관심·작성중’ 공고는 목록을 열 때 보관함으로 자동 이동합니다.</p>
-      <button v-if="tab === 'open'" type="button" class="button primary" @click="openCreate">첫 공고 추가</button>
+    <section v-else-if="visibleCount === 0" class="empty-state">
+      <strong>{{ tab === 'interested' ? '관심 공고가 없습니다.' : tab === 'progress' ? '진행 중인 공고가 없습니다.' : '보관된 공고가 없습니다.' }}</strong>
+      <p>마감이 지난 관심·작성중과 탈락 공고는 보관함으로 자동 이동합니다.</p>
+      <button v-if="tab !== 'archived'" type="button" class="button primary" @click="openCreate">첫 공고 추가</button>
     </section>
 
-    <section v-else class="card-grid">
-      <PostingCard
-        v-for="posting in postings"
-        :key="posting.id"
-        :posting="posting"
-        :selected="selected?.id === posting.id"
-        @select="open(posting)"
-      />
+    <section v-else class="kanban" :aria-label="`${tab} 공고 칸반`">
+      <section
+        v-for="column in kanbanColumns"
+        :key="column.key"
+        class="kanban-column"
+        :class="{ 'drag-over': dropOver === `column-${column.key}` }"
+        @dragover.prevent="dropOver = `column-${column.key}`"
+        @dragleave="dropOver = ''"
+        @drop.prevent.stop="dropPosting(tab, column.key)"
+      >
+        <header><strong>{{ column.label }}</strong><span>{{ column.postings.length }}</span></header>
+        <div class="kanban-column__cards">
+          <PostingCard
+            v-for="posting in column.postings"
+            :key="posting.id"
+            :posting="posting"
+            :selected="selected?.id === posting.id"
+            :moving="movingId === posting.id"
+            @select="open(posting)"
+            @drag-start="startDrag(posting, $event)"
+            @drag-end="dragging = null; dropOver = ''"
+          />
+          <p v-if="column.postings.length === 0" class="kanban-empty">없음</p>
+        </div>
+      </section>
     </section>
   </main>
 

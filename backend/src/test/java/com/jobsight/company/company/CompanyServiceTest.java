@@ -38,7 +38,7 @@ class CompanyServiceTest {
     }
 
     private static CompanyRequest request(String name, List<String> industries, String website, String summary) {
-        return new CompanyRequest(name, website, industries, null, null, null, null, null, summary, null);
+        return new CompanyRequest(name, website, industries, null, null, null, null, null, null, summary, null, null);
     }
 
     @Test

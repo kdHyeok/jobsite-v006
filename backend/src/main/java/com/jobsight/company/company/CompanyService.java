@@ -77,10 +77,12 @@ public class CompanyService {
                 normalizeIndustries(request.industries()),
                 request.companySize(),
                 request.annualRevenue(),
+                request.annualRevenue() == null ? null : revenueUnit(request),
                 request.employeeCount(),
                 normalize(request.address()),
                 request.foundedOn(),
                 normalize(request.summary()),
+                normalize(request.benefits()),
                 normalize(request.memo())
         );
     }
@@ -106,5 +108,10 @@ public class CompanyService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static RevenueUnit revenueUnit(CompanyRequest request) {
+        if (request.revenueUnit() != null) return request.revenueUnit();
+        return request.annualRevenue() >= 100_000_000L ? RevenueUnit.HUNDRED_MILLION : RevenueUnit.TEN_THOUSAND;
     }
 }

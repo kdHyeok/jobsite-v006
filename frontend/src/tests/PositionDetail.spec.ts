@@ -46,6 +46,12 @@ const mountDetail = () =>
   })
 
 describe('PositionDetail 참고 정보', () => {
+  it('요구·우대 역량을 성장 방향·취득 경험보다 먼저 보여준다', () => {
+    const labels = mountDetail().findAll('.detail-section > .label').map((node) => node.text())
+    expect(labels.indexOf('요구 역량')).toBeLessThan(labels.indexOf('성장 방향'))
+    expect(labels.indexOf('우대 역량')).toBeLessThan(labels.indexOf('취득 경험'))
+  })
+
   it('카드에 수정·떼기·삭제가 있다', () => {
     const wrapper = mountDetail()
 

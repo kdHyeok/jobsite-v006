@@ -49,6 +49,11 @@ public class Company {
     @Column(name = "annual_revenue")
     private Long annualRevenue;
 
+    /** annualRevenue 는 원 단위 정본, 이 값은 사용자가 고른 입력·표시 단위다. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "revenue_unit", length = 20)
+    private RevenueUnit revenueUnit;
+
     @Column(name = "employee_count")
     private Integer employeeCount;
 
@@ -61,6 +66,9 @@ public class Company {
 
     @Column(columnDefinition = "TEXT")
     private String summary;
+
+    @Column(columnDefinition = "TEXT")
+    private String benefits;
 
     @Column(columnDefinition = "TEXT")
     private String memo;
@@ -91,10 +99,12 @@ public class Company {
         this.industries = new LinkedHashSet<>(attributes.industries());
         this.companySize = attributes.companySize();
         this.annualRevenue = attributes.annualRevenue();
+        this.revenueUnit = attributes.annualRevenue() == null ? null : attributes.revenueUnit();
         this.employeeCount = attributes.employeeCount();
         this.address = attributes.address();
         this.foundedOn = attributes.foundedOn();
         this.summary = attributes.summary();
+        this.benefits = attributes.benefits();
         this.memo = attributes.memo();
     }
 
@@ -132,10 +142,12 @@ public class Company {
     public Set<String> getIndustries() { return industries; }
     public CompanySize getCompanySize() { return companySize; }
     public Long getAnnualRevenue() { return annualRevenue; }
+    public RevenueUnit getRevenueUnit() { return revenueUnit; }
     public Integer getEmployeeCount() { return employeeCount; }
     public String getAddress() { return address; }
     public LocalDate getFoundedOn() { return foundedOn; }
     public String getSummary() { return summary; }
+    public String getBenefits() { return benefits; }
     public String getMemo() { return memo; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

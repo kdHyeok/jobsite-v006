@@ -36,16 +36,20 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, UUID> {
             """)
     List<JobPosting> findArchived(@Param("ownerId") UUID ownerId);
 
-    /** 자동 보관 대상: 마감이 지났고 아직 내지 않은(관심·작성중) 공고. */
+    /** 자동 보관 대상: 탈락·종료 또는 마감이 지났고 아직 내지 않은 공고. */
     @Query("""
             select p from JobPosting p
              where p.ownerId = :ownerId
                and p.archivedAt is null
-               and p.status in (com.jobsight.company.posting.ApplicationStatus.INTERESTED,
-                                com.jobsight.company.posting.ApplicationStatus.DRAFTING)
-               and p.deadlineAt is not null and p.deadlineAt < :now
+               and (p.status in (com.jobsight.company.posting.ApplicationStatus.DOCUMENT_REJECTED,
+                                 com.jobsight.company.posting.ApplicationStatus.WRITTEN_TEST_REJECTED,
+                                 com.jobsight.company.posting.ApplicationStatus.INTERVIEW_REJECTED,
+                                 com.jobsight.company.posting.ApplicationStatus.CLOSED)
+                    or (p.status in (com.jobsight.company.posting.ApplicationStatus.INTERESTED,
+                                     com.jobsight.company.posting.ApplicationStatus.DRAFTING)
+                        and p.deadlineAt is not null and p.deadlineAt < :now))
             """)
-    List<JobPosting> findExpiredUnsubmitted(@Param("ownerId") UUID ownerId, @Param("now") Instant now);
+    List<JobPosting> findPendingAutoArchive(@Param("ownerId") UUID ownerId, @Param("now") Instant now);
 
     /** 기업 상세의 채용정보 카드. 마감이 지나지 않은 것만. */
     @Query("""

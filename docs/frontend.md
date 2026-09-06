@@ -10,7 +10,7 @@
 | 화면 | `PostingBoard.vue`(홈 `/`, 공고 D-day·절차 체인) · `PositionBoard.vue`(`/positions`, 검색·참고 정보 스트립) · `CompanyWorkspace.vue`(`/companies`) · `LoginView.vue` · `AdminView.vue` |
 | 상세·수정 | `Drawer.vue` 하나가 보기/수정/추가를 모두 맡는다. 동작 버튼은 헤더 아래 `#actions`. 폼은 껍데기 없이 드로어 안에 들어가고 헤더 버튼이 `form="…-form"` 으로 제출한다 |
 | 도메인 계산 | `src/types/posting.ts` 의 D-day·마감 시각 변환. 컴포넌트에 흩뿌리지 않는다 — `docs/job-postings.md` |
-| 타입 | `src/types/*.ts` — 백엔드 DTO 와 1:1. `posting.ts`(공고·절차·D-day), `position.ts`(직무·참고 정보), `company.ts` |
+| 타입 | `src/types/*.ts` — 백엔드 DTO 와 1:1. `posting.ts`(공고·절차·D-day), `position.ts`(직무·참고 정보), `company.ts`, `company-content.ts` |
 | 스타일 | `src/styles/main.css` 한 파일. 토큰과 배치 규칙은 [docs/design-system.md](design-system.md) |
 
 ## 원칙
@@ -20,6 +20,7 @@
 - **상태 보유자는 화면당 하나.** 자식은 props-down / events-up. Pinia 없음.
 - **목록은 핵심만, 나머지는 클릭.** 카드에 필드를 더하고 싶으면 드로어 상세에 넣는다 — design-system.md 규칙 3.
 - **에러 계약**: 백엔드 `ApiError.fieldErrors` → `ApiClientError.fieldErrors` → 폼 필드 메시지.
+- 기업 상세의 `뉴스·유튜브` 탭은 `CompanyContentAlbum`이 상태를 가진다. `CompanyContentForm`은 탭 안에 인라인으로 열리고 별도 모달·드로어를 만들지 않는다.
 
 ## 테스트
 

@@ -1,17 +1,28 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Company } from '../types/company'
 import { companySizeLabels, formatFoundedOn, formatRevenue } from '../types/company'
 import { ddayLabel, ddayTone, statusLabels } from '../types/posting'
+import CompanyContentAlbum from './CompanyContentAlbum.vue'
 
 // 수정·삭제 버튼은 드로어 헤더가 가진다. 여기는 읽기 전용 본문.
 defineProps<{ company: Company }>()
 
 /** 채용정보 행을 더블클릭하면 채용공고 화면에서 그 공고를 연다. */
 const emit = defineEmits<{ openPosting: [postingId: string] }>()
+
+const tab = ref<'profile' | 'content'>('profile')
 </script>
 
 <template>
-  <div>
+  <div class="tabs detail-tabs" role="tablist" aria-label="기업 상세 메뉴">
+    <button type="button" role="tab" :aria-selected="tab === 'profile'" :class="{ active: tab === 'profile' }" @click="tab = 'profile'">기업 정보</button>
+    <button type="button" role="tab" :aria-selected="tab === 'content'" :class="{ active: tab === 'content' }" @click="tab = 'content'">뉴스·유튜브</button>
+  </div>
+
+  <CompanyContentAlbum v-if="tab === 'content'" :company-id="company.id" />
+
+  <div v-else>
     <section v-if="company.industries.length || company.companySize" class="detail-section detail-chips">
       <span v-if="company.companySize" class="chip" data-tone="primary">
         {{ companySizeLabels[company.companySize] }}
@@ -31,7 +42,7 @@ const emit = defineEmits<{ openPosting: [postingId: string] }>()
       <dl class="detail-facts">
         <div>
           <dt>매출액</dt>
-          <dd>{{ formatRevenue(company.annualRevenue) }}</dd>
+          <dd>{{ formatRevenue(company.annualRevenue, company.revenueUnit) }}</dd>
         </div>
         <div>
           <dt>사원수</dt>
@@ -53,6 +64,13 @@ const emit = defineEmits<{ openPosting: [postingId: string] }>()
           </dd>
         </div>
       </dl>
+    </section>
+
+    <section class="detail-section">
+      <p class="label">기업 복지</p>
+      <p class="body-copy" :class="{ empty: !company.benefits }">
+        {{ company.benefits || '아직 입력된 기업 복지가 없습니다.' }}
+      </p>
     </section>
 
     <section class="detail-section">

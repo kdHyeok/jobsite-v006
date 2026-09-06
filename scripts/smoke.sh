@@ -46,6 +46,7 @@ check "  me.authenticated (쿠키 없음)"       "false" "$(curl -sS "$BASE/api/
 echo ""
 echo "[미인증 차단]"
 check "GET /api/companies"                  "401"  "$(code "$BASE/api/companies")"
+check "GET /api/companies/{id}/contents"    "401"  "$(code "$BASE/api/companies/00000000-0000-0000-0000-000000000000/contents")"
 check "GET /api/postings"                   "401"  "$(code "$BASE/api/postings")"
 check "GET /api/positions"                  "401"  "$(code "$BASE/api/positions")"
 check "GET /api/references"                 "401"  "$(code "$BASE/api/references")"

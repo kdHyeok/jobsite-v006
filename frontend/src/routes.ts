@@ -23,6 +23,8 @@ export const API = {
   logout: '/api/auth/logout',
   companies: '/api/companies',
   company: (id: string) => `/api/companies/${id}`,
+  companyContents: (companyId: string) => `/api/companies/${companyId}/contents`,
+  companyContent: (companyId: string, id: string) => `/api/companies/${companyId}/contents/${id}`,
   postings: '/api/postings',
   posting: (id: string) => `/api/postings/${id}`,
   postingStatus: (id: string) => `/api/postings/${id}/status`,

@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 /** 모든 응답은 로그인 계정이 소유한 공고로 한정된다. 타인 소유 id 는 404. */
-@Tag(name = "postings", description = "채용공고. 마감 임박 순 정렬, 마감된 관심·작성중 공고 자동 보관, 절차 단계. 인증 필수.")
+@Tag(name = "postings", description = "채용공고. 상태별 진행 관리, 마감된 미지원 공고와 탈락 공고 자동 보관, 절차 단계. 인증 필수.")
 @RestController
 @RequestMapping(ApiPaths.POSTINGS)
 public class JobPostingController {
@@ -37,7 +37,7 @@ public class JobPostingController {
 
     @Operation(summary = "공고 목록",
             description = "기본은 진행 중 공고를 마감 임박 순(상시채용은 맨 뒤)으로. archived=true 면 보관함. "
-                    + "조회 시점에 마감 지난 관심·작성중 공고를 보관함으로 옮긴다.")
+                    + "조회 시점에 마감 지난 관심·작성 중 공고와 탈락 공고를 보관함으로 옮긴다.")
     @GetMapping
     public List<JobPostingResponse> findAll(
             @RequestParam(name = "archived", defaultValue = "false") boolean archived) {
@@ -67,7 +67,7 @@ public class JobPostingController {
     }
 
     @Operation(summary = "지원 상태 변경",
-            description = "SUBMITTED·CLOSED 로 옮기면 보관함에서 자동으로 꺼낸다.")
+            description = "탈락 상태는 즉시 보관하고, 진행 상태로 바꾸면 보관함에서 자동으로 꺼낸다.")
     @PatchMapping("/{id}/status")
     public JobPostingResponse changeStatus(@PathVariable UUID id,
                                            @Valid @RequestBody StatusUpdateRequest request) {

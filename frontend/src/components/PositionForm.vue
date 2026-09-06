@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import type { Position, PositionPayload } from '../types/position'
+import TagInput from './TagInput.vue'
 
 const props = defineProps<{
   position: Position
+  techOptions: string[]
   saving: boolean
   apiFieldErrors: Record<string, string>
 }>()
 
 const emit = defineEmits<{ submit: [payload: PositionPayload] }>()
 
-type FormState = Omit<PositionPayload, 'techStack'> & { techStackText: string }
-
-const form = reactive<FormState>({
+const form = reactive<PositionPayload>({
   name: '', team: '', role: '', responsibilities: '', impact: '', growth: '', experience: '',
-  requiredSkills: '', preferredSkills: '', headcount: '', workLocation: '', techStackText: '',
+  requiredSkills: '', preferredSkills: '', headcount: '', workLocation: '', techStack: [],
 })
 const localErrors = reactive<Record<string, string>>({})
 
@@ -33,7 +33,7 @@ watch(
       preferredSkills: position.preferredSkills ?? '',
       headcount: position.headcount ?? '',
       workLocation: position.workLocation ?? '',
-      techStackText: position.techStack.join(', '),
+      techStack: [...position.techStack],
     })
     Object.keys(localErrors).forEach((key) => delete localErrors[key])
   },
@@ -48,12 +48,10 @@ function submit() {
     localErrors.name = '직무 이름을 입력해 주세요.'
     return
   }
-  const { techStackText, ...rest } = form
   emit('submit', {
-    ...rest,
+    ...form,
     name: form.name.trim(),
-    // 업종과 같은 규칙: 쉼표 분리, 공백·중복 제거, 순서 유지
-    techStack: [...new Set(techStackText.split(',').map((v) => v.trim()).filter(Boolean))],
+    techStack: [...form.techStack],
   })
 }
 </script>
@@ -82,10 +80,10 @@ function submit() {
         <span>근무지역</span>
         <input v-model="form.workLocation" maxlength="160" placeholder="예: 서울 강남구" />
       </label>
-      <label class="field full">
-        <span>사용 기술 스택 <small>쉼표로 여러 개</small></span>
-        <input v-model="form.techStackText" placeholder="예: Java, Spring, Kafka" />
-      </label>
+      <div class="field full">
+        <span>사용 기술 스택 <small>기존 태그 선택 또는 Enter로 추가</small></span>
+        <TagInput v-model="form.techStack" :suggestions="techOptions" placeholder="예: Java" />
+      </div>
 
       <p class="form-section">일</p>
       <label class="field full">
@@ -97,16 +95,6 @@ function submit() {
         <textarea v-model="form.impact" rows="2" placeholder="이 일이 어디에 어떤 영향을 주는가" />
       </label>
 
-      <p class="form-section">나</p>
-      <label class="field full">
-        <span>성장 방향</span>
-        <textarea v-model="form.growth" rows="2" placeholder="이 직무로 어떤 부분이 성장하는가" />
-      </label>
-      <label class="field full">
-        <span>취득 경험</span>
-        <textarea v-model="form.experience" rows="2" placeholder="이 직무로 얻는 경험" />
-      </label>
-
       <p class="form-section">역량</p>
       <label class="field full">
         <span>요구 역량</span>
@@ -115,6 +103,16 @@ function submit() {
       <label class="field full">
         <span>우대 역량</span>
         <textarea v-model="form.preferredSkills" rows="3" />
+      </label>
+
+      <p class="form-section">나</p>
+      <label class="field full">
+        <span>성장 방향</span>
+        <textarea v-model="form.growth" rows="2" placeholder="이 직무로 어떤 부분이 성장하는가" />
+      </label>
+      <label class="field full">
+        <span>취득 경험</span>
+        <textarea v-model="form.experience" rows="2" placeholder="이 직무로 얻는 경험" />
       </label>
     </div>
   </form>

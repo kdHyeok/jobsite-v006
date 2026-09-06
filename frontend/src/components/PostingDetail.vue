@@ -2,8 +2,9 @@
 import type { ApplicationStatus, JobPosting, StepResult } from '../types/posting'
 import {
   employmentTypeLabels,
-  formatDeadline,
+  formatDeadlineParts,
   nextStepResult,
+  selectableStatuses,
   statusLabels,
   stepResultLabels,
 } from '../types/posting'
@@ -32,7 +33,8 @@ const formatDate = (value: string | null) =>
           :value="posting.status"
           @change="emit('changeStatus', ($event.target as HTMLSelectElement).value as ApplicationStatus)"
         >
-          <option v-for="(label, value) in statusLabels" :key="value" :value="value">{{ label }}</option>
+          <option v-if="posting.status === 'CLOSED'" value="CLOSED" disabled>종료 (기존)</option>
+          <option v-for="value in selectableStatuses" :key="value" :value="value">{{ statusLabels[value] }}</option>
         </select>
       </label>
     </section>
@@ -61,14 +63,19 @@ const formatDate = (value: string | null) =>
         <div>
           <dt>고용회사</dt>
           <dd>
-            <button type="button" class="link-button" @click="emit('openCompany', posting.companyId)">
-              {{ posting.companyName ?? '회사 미입력' }} ↗
+            <button type="button" class="entity-link" @click="emit('openCompany', posting.companyId)">
+              <span class="entity-icon" aria-hidden="true">▦</span>
+              <span>{{ posting.companyName ?? '회사 미입력' }}</span>
+              <span aria-hidden="true">↗</span>
             </button>
           </dd>
         </div>
         <div>
           <dt>서류마감</dt>
-          <dd>{{ formatDeadline(posting.deadlineAt) }}</dd>
+          <dd class="deadline-text">
+            <span>{{ formatDeadlineParts(posting.deadlineAt).year }}</span>
+            <strong>{{ formatDeadlineParts(posting.deadlineAt).emphasized }}</strong>
+          </dd>
         </div>
         <div>
           <dt>고용형태</dt>

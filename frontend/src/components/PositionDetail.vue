@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import type { Position, ReferenceItem, ReferenceKind, ReferencePayload } from '../types/position'
 import { referenceKindLabels } from '../types/position'
-import { ddayLabel, ddayTone, formatDeadline, statusLabels } from '../types/posting'
+import { ddayLabel, ddayTone, formatDeadlineParts, statusLabels } from '../types/posting'
 
 /**
  * 직무 상세 + 참고 정보 스트립. 추가는 "기존에서 검색" 또는 "새로 만들기".
@@ -86,10 +86,10 @@ function submitForm() {
 const sections: Array<[keyof Position, string]> = [
   ['responsibilities', '담당업무'],
   ['impact', '업무의 영향력'],
-  ['growth', '성장 방향'],
-  ['experience', '취득 경험'],
   ['requiredSkills', '요구 역량'],
   ['preferredSkills', '우대 역량'],
+  ['growth', '성장 방향'],
+  ['experience', '취득 경험'],
 ]
 </script>
 
@@ -109,15 +109,17 @@ const sections: Array<[keyof Position, string]> = [
             <button
               v-if="position.postingTitle"
               type="button"
-              class="link-button"
+              class="entity-link"
               @click="emit('openPosting', position.postingId)"
             >
-              {{ position.postingTitle }} ↗
+              <span class="entity-icon" aria-hidden="true">▤</span>
+              <span>({{ position.companyName ?? '회사 미입력' }}) {{ position.postingTitle }}</span>
+              <span aria-hidden="true">↗</span>
             </button>
             <span v-else>—</span>
           </dd>
         </div>
-        <div><dt>서류마감</dt><dd>{{ formatDeadline(position.deadlineAt) }}</dd></div>
+        <div><dt>서류마감</dt><dd class="deadline-text"><span>{{ formatDeadlineParts(position.deadlineAt).year }}</span><strong>{{ formatDeadlineParts(position.deadlineAt).emphasized }}</strong></dd></div>
         <div><dt>소속 팀</dt><dd>{{ position.team || '—' }}</dd></div>
         <div><dt>담당 역할</dt><dd>{{ position.role || '—' }}</dd></div>
         <div><dt>모집인원</dt><dd>{{ position.headcount || '—' }}</dd></div>

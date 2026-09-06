@@ -28,11 +28,11 @@ app_users
 
 | 축 | 어디 | 값 |
 |---|---|---|
-| **내 참여 상태** `status` | `job_postings` | `INTERESTED` `DRAFTING` `SUBMITTED` `CLOSED` |
-| **회사 절차 진행** | `recruitment_steps.result` | `UPCOMING` `IN_PROGRESS` `PASSED` `FAILED` |
+| **내 참여 상태** `status` | `job_postings` | `INTERESTED` `DRAFTING` `SUBMITTED` `WRITTEN_TEST_PREP` `INTERVIEW_PREP` `ACCEPTED` `DOCUMENT_REJECTED` `WRITTEN_TEST_REJECTED` `INTERVIEW_REJECTED` (`CLOSED`는 기존 데이터 호환 전용) |
+| **회사 절차 완료 여부** | `recruitment_steps.result` | `UPCOMING` `PASSED` |
 
 이전 `stage` 의 `CODING_TEST` `INTERVIEW` `AWAITING_RESULT` 는 절차 단계다. V10 이 `SUBMITTED` + 그 이름의 step 하나로 옮겼다.
-"현재 단계" 는 첫 `UPCOMING`/`IN_PROGRESS` step. 화면은 `[서류] → [인적성] → [면접]` 체인으로 그린다.
+"현재 단계" 는 첫 `UPCOMING` step. 화면은 `[서류] → [인적성] → [면접]` 체인으로 그리고 노드를 누르면 예정↔완료로 바꾼다.
 
 ### 필드 위치
 
@@ -41,6 +41,7 @@ app_users
 | 모집 부문(제목), 링크, 고용형태, 마감, 지원자격 | 공고 | 공고 하나에 하나 |
 | 담당업무, 요구/우대 역량, 기술 스택, 인원, 근무지, 팀, 역할, 영향력, 성장, 경험 | 직무 | 공채는 직무마다 다르다 |
 | 절차 | 공고 | 결정 2 — 직무별 차이는 단계 이름에 적는다("코딩테스트(개발직군)") |
+| 복지 | 기업 | 공고·직무와 무관한 기업 공통 정보 |
 
 ## 불변 조건
 
@@ -48,7 +49,7 @@ app_users
 2. **공고는 직무가 1개 이상**: 직무 없이 저장하면 `title` 과 같은 이름의 직무를 하나 만든다. 마지막 직무는 지울 수 없다(409 `LAST_POSITION`).
 3. **기업은 직접 입력하면 자동 생성**: `companyId` 없이 `companyName` 만 오면 공백 제거·소문자 기준으로 기존 기업을 찾고, 없으면 이름만 채운 기업을 만든다. `company_name_snapshot` 은 없다.
 4. **D-day 정렬**: 마감 가까운 순, 상시(NULL)는 맨 뒤. 서버가 정렬한다.
-5. **자동 보관**: 마감 지남 + `status ∈ {INTERESTED, DRAFTING}` 인 공고를 **목록 조회 시점에** 보관. `SUBMITTED` 로 옮기면 보관함에서 자동으로 꺼낸다.
+5. **자동 보관**: 마감 지남 + `status ∈ {INTERESTED, DRAFTING}` 인 공고는 미지원으로, 세 탈락 상태와 기존 `CLOSED`는 즉시 보관한다. 탈락이 아닌 상태로 옮기면 보관함에서 자동으로 꺼낸다.
 6. **참고 정보는 계정 안에서 공유**(결정 1): 한 참고 정보가 여러 직무에 붙는다. 다른 사용자와는 공유하지 않는다.
 7. **절차는 공고 단위**(결정 2). `seq` 는 `@OrderColumn` 이 관리하는 0-based 정수. 분기 없음.
 
@@ -56,13 +57,13 @@ app_users
 
 | 무엇 | 어디 |
 |---|---|
-| 스키마 | `V9__…job_postings.sql` → **`V10__positions_steps_references.sql`** |
+| 스키마 | `V9__…job_postings.sql` → `V10__positions_steps_references.sql` → `V12__application_status_and_revenue_unit.sql` → **`V13__company_benefits_and_step_results.sql`** |
 | 공고 | `posting/JobPosting` `JobPostingService` `JobPostingController` — `ApiPaths.POSTINGS` |
 | 절차 | `posting/RecruitmentStep` (공고에 임베드, cascade) · `PATCH /postings/{id}/steps/{seq}` |
 | 직무 | `position/Position` `PositionService` `PositionController` — `ApiPaths.POSITIONS` |
 | 참고 정보 | `reference/ReferenceItem` `ReferenceService` `ReferenceController` — `ApiPaths.REFERENCES` · 연결은 `PUT /positions/{id}/references` |
 | 기업 자동 생성 | `JobPostingService.resolveCompany()` + `CompanyRepository.findByOwnerIdAndNameKey()` |
-| 화면 | `PostingBoard`(홈 `/`) · `PositionBoard`(`/positions`) · `CompanyWorkspace`(`/companies`) |
+| 화면 | `PostingBoard`(홈 `/`, 관심 공고/진행 중/보관함 칸반) · `PositionBoard`(`/positions`) · `CompanyWorkspace`(`/companies`) |
 | D-day·절차 표기 | `frontend/src/types/posting.ts` — `daysUntil` `ddayLabel` `ddayTone` `formatDeadline` `nextStepResult` |
 | 화면 간 이동 | `routes.ts` 의 `FOCUS_QUERY`. `App.navigate(route, id)` → `?focus=<id>` → 보드가 `applyFocus()`/`openById()` 로 그 드로어를 연다 |
 | 이동 방향 | 정방향(자식, 행 더블클릭): 기업→공고, 공고→직무. 역방향(부모, 링크 버튼): 공고→기업, 직무→공고 |
@@ -100,15 +101,31 @@ cd frontend && npm run type-check && npm test
 7. 공고 상세의 모집 직무 행을 더블클릭 → 모집 직무 화면에서 그 직무가 열리는가
 8. 공고 상세의 `고용회사 ↗` → 기업 화면에서 그 기업이 열리는가
 9. 직무 상세의 `공고 ↗` → 채용공고 화면에서 그 공고가 열리는가(보관된 공고도)
+10. 관심 공고 칸반은 관심·작성 중, 진행 중 칸반은 제출 완료·필기 준비·면접 준비·합격, 보관함은 미지원·세 탈락으로 나뉘는가
+11. 탈락 상태로 바꾸면 즉시 보관되고, 다른 상태로 바꾸면 다시 진행 중으로 나오는가
+12. 새 공고의 마감과 새 절차 단계 시간이 현재 분으로 채워지는가
+13. 기업 업종과 직무 기술 스택을 기존 태그에서 고르거나 새 태그로 추가·수정·삭제할 수 있는가
+14. 매출액을 만 원/억 원으로 입력하고 같은 단위로 다시 표시·수정할 수 있는가
+15. 카드를 같은 탭의 다른 열로 끌면 그 열의 상태가 되고, 다른 탭으로 끌면 탭 기본 상태로 이동하는가
+16. 기업 복지를 저장·수정하면 상세에 그대로 보이는가
+17. 채용 절차 노드를 누를 때 예정과 완료만 번갈아 표시되는가
+18. 공고 제목 옆 숫자는 없고 관심 공고·진행 중·보관함 탭마다 원형 개수 배지가 보이는가
+19. 직무 상세와 수정에서 요구·우대 역량이 성장 방향·취득 경험보다 먼저 나오는가
 
 ## 함정
 
 - **마감 시각은 로컬 입력 → UTC 저장.** `datetime-local` 값에는 시간대가 없다. `toUtcIso()` 로 변환해 보낸다.
+- 새 공고와 새 절차 단계의 시각 기본값은 폼을 여는 시점의 현재 분이다. 기존 행의 빈 시각을 임의로 채우지는 않는다.
 - **D-day 는 서버가 내려주지 않는다.** 프런트가 사용자 시계로 계산한다.
 - **기업 목록 응답의 `openPostings` 는 비어 있다**(N+1 회피). 상세에서만 채워진다.
 - **공고 PUT 은 직무 목록을 통째로 받는다.** `id` 가 있는 항목은 갱신, 없는 항목은 생성, 요청에 빠진 기존 직무는 삭제된다 — 직무 상세(팀·역량 등)는 직무 페이지에서 편집하므로 공고 폼은 `id`+`name` 만 다룬다.
+- 공고 PUT의 절차 목록은 값 기준 통째 교체지만, 영속화할 때는 같은 순번의 엔티티를 갱신하고 끝에서만 추가·삭제한다. 전부 지운 뒤 다시 넣으면 Hibernate flush 순서에 따라 `(posting_id, seq)` 고유키가 충돌한다.
 - 절차 `seq` 는 재정렬하면 바뀐다. step 을 밖에서 id 로 참조하지 않는다.
 - **`?focus=` 는 먼저 이미 불러온 목록에서 찾는다.** 기업·직무는 전체 목록을 받으므로 항상 찾힌다. 공고만 진행 중/보관함으로 나뉘어 있어, 목록에 없으면 `getPosting(id)` 로 한 번 더 읽는다 — 보관된 공고로도 건너뛸 수 있다. 지워졌거나 남의 것이면 조용히 넘어간다.
 - `reference_items.related_position_id` 는 직무를 지우면 NULL 이 된다(ON DELETE SET NULL). 카드는 제목으로 남는다.
 - **‘떼기’ 와 ‘삭제’ 는 다르다.** 떼기는 `PUT /positions/{id}/references` 로 이 직무의 연결만 끊고, 삭제는 `DELETE /references/{id}` 로 참고 정보 자체를 지워 **붙어 있던 모든 직무에서 사라진다**(`position_references` ON DELETE CASCADE). 삭제만 확인 대화상자를 받는다.
 - 참고 정보를 고치면 그 정보가 붙은 다른 직무의 표시도 바뀐다. `PositionBoard` 가 수정·삭제 뒤 목록을 다시 읽는 이유다.
+- 업종·기술 스택 선택지는 별도 마스터 테이블이 아니라 현재 계정의 기존 기업·직무 값에서 모은다. 태그 이름 수정은 선택 태그를 입력칸으로 되돌린 뒤 새 이름으로 확정하는 현재 항목 단위 편집이다.
+- 매출액은 DB에 원 단위 `annual_revenue`와 입력·표시 단위 `revenue_unit`을 함께 저장한다. 계산 기준은 만 원=`10,000원`, 억 원=`100,000,000원`이다.
+- **드롭 규칙**: 관심 공고 탭=`INTERESTED`, 진행 중 탭=`SUBMITTED`. 보관함 탭은 제출 완료→서류 탈락, 필기 준비→필기 탈락, 면접 준비→면접 탈락이고 관심·작성 중은 상태를 유지해 미지원에 둔다. 합격처럼 매핑이 없는 상태도 상태를 유지한 채 `기타 보관`에 둔다. 열에 직접 놓으면 그 열 상태가 우선한다.
+- 탭 개수는 진행 목록과 보관 목록을 함께 읽어 계산한다. 관심 공고는 `INTERESTED·DRAFTING`, 진행 중은 나머지 미보관 상태, 보관함은 보관 목록 전체 개수다.

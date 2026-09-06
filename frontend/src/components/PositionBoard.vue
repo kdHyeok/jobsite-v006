@@ -38,6 +38,14 @@ const deleting = ref(false)
 /** 참고 정보 삭제는 여러 직무에 영향을 주므로 따로 확인받는다. */
 const referenceDeleteTarget = ref<ReferenceItem | null>(null)
 const deletingReference = ref(false)
+const techOptions = computed(() => [...new Set(positions.value.flatMap((position) => position.techStack))].sort())
+const selectedSubtitle = computed(() => {
+  if (!selected.value) return ''
+  return [
+    selected.value.companyName,
+    selected.value.postingTitle !== selected.value.name ? selected.value.postingTitle : null,
+  ].filter(Boolean).join(' · ')
+})
 
 /** 검색은 클라이언트 필터. 이름·회사·공고·팀·스택. 수백 건을 넘으면 서버 ?q= 로. */
 const visible = computed(() => {
@@ -243,7 +251,10 @@ onMounted(async () => {
           <span class="card__title">{{ position.name }}</span>
           <span class="dday" :data-tone="ddayTone(position.deadlineAt)">{{ ddayLabel(position.deadlineAt) }}</span>
         </span>
-        <span class="card__sub">{{ position.companyName ?? '회사 미입력' }}<template v-if="position.postingTitle && position.postingTitle !== position.name"> · {{ position.postingTitle }}</template></span>
+        <span class="entity-line">
+          <span class="entity-company"><span class="entity-icon" aria-hidden="true">▦</span>{{ position.companyName ?? '회사 미입력' }}</span>
+          <span v-if="position.postingTitle && position.postingTitle !== position.name" class="entity-posting">{{ position.postingTitle }}</span>
+        </span>
         <span v-if="position.techStack.length" class="card__chips">
           <span v-for="tech in position.techStack.slice(0, 3)" :key="tech" class="chip">{{ tech }}</span>
           <span v-if="position.techStack.length > 3" class="chip">+{{ position.techStack.length - 3 }}</span>
@@ -255,7 +266,7 @@ onMounted(async () => {
   <Drawer
     v-if="mode === 'view' && selected"
     :title="selected.name"
-    :subtitle="[selected.companyName, selected.postingTitle].filter(Boolean).join(' · ')"
+    :subtitle="selectedSubtitle"
     @close="close"
   >
     <template #actions>
@@ -289,7 +300,7 @@ onMounted(async () => {
         {{ saving ? '저장 중…' : '저장' }}
       </button>
     </template>
-    <PositionForm :position="selected" :saving="saving" :api-field-errors="formErrors" @submit="save" />
+    <PositionForm :position="selected" :tech-options="techOptions" :saving="saving" :api-field-errors="formErrors" @submit="save" />
   </Drawer>
 
   <ConfirmDialog

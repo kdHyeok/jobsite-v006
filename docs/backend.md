@@ -11,7 +11,7 @@
 | 현재 사용자 읽기 | `auth/CurrentUser.java` — 서비스가 직접 호출, 컨트롤러는 소유자를 넘기지 않는다 |
 | Google 클라이언트 등록 (조건부) | `config/GoogleOAuthConfig.java` |
 | 에러 응답 형식 | `common/GlobalExceptionHandler.java`, `common/ApiError`, `common/ApiRuleException` |
-| 스키마 | `resources/db/migration/V1~V8` — Flyway, `ddl-auto: validate` |
+| 스키마 | `resources/db/migration/V1~V13` — Flyway, `ddl-auto: validate` |
 | 설정 | `resources/application.yml` — 비밀값은 `configtree:/run/secrets/` |
 
 ## 요청 한 번의 흐름
@@ -48,6 +48,8 @@ nginx → SecurityFilterChain
 ## 마이그레이션 규칙
 
 적용된 `V*.sql` 은 수정하지 않는다. 새 번호로 추가한다. 데이터 삭제는 마이그레이션에 넣지 않고 사람이 결정한다(V6 참고).
+
+기업별 뉴스·유튜브 자료는 `V11__company_contents.sql`과 `companycontent/*`가 담당한다. 회사·콘텐츠 조회 모두 `owner_id` 조건을 쿼리에 포함한다.
 
 ## 컴파일·테스트
 

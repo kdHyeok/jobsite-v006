@@ -1,9 +1,12 @@
 export type EmploymentType = 'FULL_TIME' | 'CONTRACT' | 'INTERN' | 'PART_TIME' | 'DISPATCH'
 
 /** 내 참여 상태. 회사 절차(RecruitmentStep)와는 다른 축 — docs/job-postings.md. */
-export type ApplicationStatus = 'INTERESTED' | 'DRAFTING' | 'SUBMITTED' | 'CLOSED'
+export type ApplicationStatus =
+  | 'INTERESTED' | 'DRAFTING' | 'SUBMITTED' | 'WRITTEN_TEST_PREP' | 'INTERVIEW_PREP' | 'ACCEPTED'
+  | 'DOCUMENT_REJECTED' | 'WRITTEN_TEST_REJECTED' | 'INTERVIEW_REJECTED' | 'CLOSED'
 
-export type StepResult = 'UPCOMING' | 'IN_PROGRESS' | 'PASSED' | 'FAILED'
+export type StepResult = 'UPCOMING' | 'PASSED'
+export type PostingTab = 'interested' | 'progress' | 'archived'
 
 export interface RecruitmentStep {
   seq: number
@@ -74,8 +77,14 @@ export const employmentTypeLabels: Record<EmploymentType, string> = {
 
 export const statusLabels: Record<ApplicationStatus, string> = {
   INTERESTED: '관심',
-  DRAFTING: '작성중',
-  SUBMITTED: '지원완료',
+  DRAFTING: '작성 중',
+  SUBMITTED: '제출 완료',
+  WRITTEN_TEST_PREP: '필기 준비',
+  INTERVIEW_PREP: '면접 준비',
+  ACCEPTED: '합격',
+  DOCUMENT_REJECTED: '서류 탈락',
+  WRITTEN_TEST_REJECTED: '필기 탈락',
+  INTERVIEW_REJECTED: '면접 탈락',
   CLOSED: '종료',
 }
 
@@ -83,18 +92,85 @@ export const statusTone: Record<ApplicationStatus, string> = {
   INTERESTED: 'neutral',
   DRAFTING: 'warning',
   SUBMITTED: 'primary',
+  WRITTEN_TEST_PREP: 'warning',
+  INTERVIEW_PREP: 'warning',
+  ACCEPTED: 'positive',
+  DOCUMENT_REJECTED: 'negative',
+  WRITTEN_TEST_REJECTED: 'negative',
+  INTERVIEW_REJECTED: 'negative',
   CLOSED: 'neutral',
+}
+
+/** CLOSED 는 기존 데이터 표시 전용이라 새 입력 선택지에는 넣지 않는다. */
+export const selectableStatuses = (Object.keys(statusLabels) as ApplicationStatus[])
+  .filter((status) => status !== 'CLOSED')
+
+type KanbanColumn = { key: string; label: string; statuses: ApplicationStatus[]; dropStatus: ApplicationStatus }
+
+export const interestedKanbanColumns: KanbanColumn[] = [
+  { key: 'interested', label: '관심', statuses: ['INTERESTED'], dropStatus: 'INTERESTED' },
+  { key: 'drafting', label: '작성 중', statuses: ['DRAFTING'], dropStatus: 'DRAFTING' },
+]
+
+export const progressKanbanColumns: KanbanColumn[] = [
+  { key: 'submitted', label: '제출 완료', statuses: ['SUBMITTED'], dropStatus: 'SUBMITTED' },
+  { key: 'written', label: '필기 준비', statuses: ['WRITTEN_TEST_PREP'], dropStatus: 'WRITTEN_TEST_PREP' },
+  { key: 'interview', label: '면접 준비', statuses: ['INTERVIEW_PREP'], dropStatus: 'INTERVIEW_PREP' },
+  { key: 'accepted', label: '합격', statuses: ['ACCEPTED'], dropStatus: 'ACCEPTED' },
+]
+
+export const archivedKanbanColumns: KanbanColumn[] = [
+  { key: 'not-applied', label: '미지원', statuses: ['INTERESTED', 'DRAFTING'], dropStatus: 'INTERESTED' },
+  { key: 'document-rejected', label: '서류 탈락', statuses: ['DOCUMENT_REJECTED'], dropStatus: 'DOCUMENT_REJECTED' },
+  { key: 'written-rejected', label: '필기 탈락', statuses: ['WRITTEN_TEST_REJECTED'], dropStatus: 'WRITTEN_TEST_REJECTED' },
+  { key: 'interview-rejected', label: '면접 탈락', statuses: ['INTERVIEW_REJECTED'], dropStatus: 'INTERVIEW_REJECTED' },
+]
+
+const columnsByTab: Record<PostingTab, KanbanColumn[]> = {
+  interested: interestedKanbanColumns,
+  progress: progressKanbanColumns,
+  archived: archivedKanbanColumns,
+}
+
+export function groupPostingsByKanban(postings: JobPosting[], tab: PostingTab) {
+  const definitions = columnsByTab[tab]
+  const known = new Set(definitions.flatMap((column) => column.statuses))
+  const columns = definitions.map((column) => ({
+    ...column,
+    postings: postings.filter((posting) => column.statuses.includes(posting.status)),
+  }))
+  const other = postings.filter((posting) => !known.has(posting.status))
+  return tab === 'archived' && other.length
+    ? [...columns, { key: 'other', label: '기타 보관', statuses: [], dropStatus: 'INTERESTED' as ApplicationStatus, postings: other }]
+    : columns
+}
+
+export function postingTabCounts(open: JobPosting[], archived: JobPosting[]): Record<PostingTab, number> {
+  const count = (tab: PostingTab) => groupPostingsByKanban(open, tab)
+    .reduce((sum, column) => sum + column.postings.length, 0)
+  return { interested: count('interested'), progress: count('progress'), archived: archived.length }
+}
+
+/** 드롭 한 번을 기존 status/archive API 호출로 옮길 최종 상태로 바꾼다. */
+export function postingDropTarget(current: ApplicationStatus, tab: PostingTab, columnKey?: string) {
+  const columnStatus = columnsByTab[tab].find((column) => column.key === columnKey)?.dropStatus
+  if (tab === 'interested') return { status: columnStatus ?? 'INTERESTED' as ApplicationStatus, archived: false }
+  if (tab === 'progress') return { status: columnStatus ?? 'SUBMITTED' as ApplicationStatus, archived: false }
+  const rejected: Partial<Record<ApplicationStatus, ApplicationStatus>> = {
+    SUBMITTED: 'DOCUMENT_REJECTED',
+    WRITTEN_TEST_PREP: 'WRITTEN_TEST_REJECTED',
+    INTERVIEW_PREP: 'INTERVIEW_REJECTED',
+  }
+  return { status: columnStatus ?? rejected[current] ?? current, archived: true }
 }
 
 export const stepResultLabels: Record<StepResult, string> = {
   UPCOMING: '예정',
-  IN_PROGRESS: '진행 중',
-  PASSED: '통과',
-  FAILED: '탈락',
+  PASSED: '완료',
 }
 
-/** 절차 노드를 누르면 이 순서로 돈다. 탈락 뒤에는 예정으로 돌아간다. */
-const STEP_CYCLE: StepResult[] = ['UPCOMING', 'IN_PROGRESS', 'PASSED', 'FAILED']
+/** 절차 노드를 누르면 예정과 완료만 번갈아 바뀐다. */
+const STEP_CYCLE: StepResult[] = ['UPCOMING', 'PASSED']
 export function nextStepResult(current: StepResult): StepResult {
   return STEP_CYCLE[(STEP_CYCLE.indexOf(current) + 1) % STEP_CYCLE.length]
 }
@@ -131,13 +207,22 @@ export function ddayTone(
   return 'later'
 }
 
-/** 2026-09-10T09:00:00Z -> 2026.09.10 18:00 (사용자 시간대) */
+/** 2026-09-10T14:00:00Z -> 2026년 9월 10일 오후 11시 00분 (사용자 시간대) */
 export function formatDeadline(deadlineAt: string | null): string {
   if (!deadlineAt) return '상시채용'
+  const parts = formatDeadlineParts(deadlineAt)
+  return `${parts.year} ${parts.emphasized}`
+}
+
+export function formatDeadlineParts(deadlineAt: string | null): { year: string; emphasized: string } {
+  if (!deadlineAt) return { year: '', emphasized: '상시채용' }
   const date = new Date(deadlineAt)
   const pad = (value: number) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} `
-    + `${pad(date.getHours())}:${pad(date.getMinutes())}`
+  const hour = date.getHours()
+  return {
+    year: `${date.getFullYear()}년`,
+    emphasized: `${date.getMonth() + 1}월 ${date.getDate()}일 ${hour < 12 ? '오전' : '오후'} ${hour % 12 || 12}시 ${pad(date.getMinutes())}분`,
+  }
 }
 
 /** datetime-local 입력값(시간대 없음)을 UTC ISO 로. 사용자의 로컬 시간대로 해석한다. */
@@ -153,4 +238,8 @@ export function toLocalInput(deadlineAt: string | null): string {
   const pad = (value: number) => String(value).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
     + `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+export function nowLocalInput(): string {
+  return toLocalInput(new Date().toISOString())
 }

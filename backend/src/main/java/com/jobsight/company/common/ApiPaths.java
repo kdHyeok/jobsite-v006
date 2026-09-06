@@ -21,6 +21,7 @@ public final class ApiPaths {
 
     public static final String ADMIN = API + "/admin";
     public static final String COMPANIES = API + "/companies";
+    public static final String COMPANY_CONTENTS = COMPANIES + "/{companyId}/contents";
     public static final String POSTINGS = API + "/postings";
     public static final String POSITIONS = API + "/positions";
     public static final String REFERENCES = API + "/references";

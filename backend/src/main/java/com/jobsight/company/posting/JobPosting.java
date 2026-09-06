@@ -50,7 +50,7 @@ public class JobPosting {
 
     /** 내 참여 상태. 회사 절차 진행은 steps 가 가진다. */
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private ApplicationStatus status;
 
     @Column(columnDefinition = "TEXT")
@@ -83,10 +83,14 @@ public class JobPosting {
         this.id = UUID.randomUUID();
         this.ownerId = ownerId;
         apply(attributes);
+        if (status.isRejectedOrClosed()) archivedAt = Instant.now();
     }
 
     public void update(JobPostingAttributes attributes) {
+        boolean wasTerminal = status.isRejectedOrClosed();
         apply(attributes);
+        if (status.isRejectedOrClosed()) archive(Instant.now());
+        else if (wasTerminal) restore();
         this.updatedAt = Instant.now();
     }
 
@@ -98,17 +102,22 @@ public class JobPosting {
         this.deadlineAt = attributes.deadlineAt();
         this.status = attributes.status();
         this.qualifications = attributes.qualifications();
-        // 통째로 교체. orphanRemoval 이 빠진 단계를 지운다.
-        this.steps.clear();
-        this.steps.addAll(attributes.steps());
+        replaceSteps(attributes.steps());
+    }
+
+    /** 같은 seq는 갱신하고 끝에서만 추가·삭제해 (posting_id, seq) flush 충돌을 피한다. */
+    private void replaceSteps(List<RecruitmentStep> replacements) {
+        while (steps.size() > replacements.size()) steps.remove(steps.size() - 1);
+        for (int i = 0; i < replacements.size(); i++) {
+            if (i < steps.size()) steps.get(i).updateFrom(replacements.get(i));
+            else steps.add(replacements.get(i));
+        }
     }
 
     public void changeStatus(ApplicationStatus status) {
         this.status = status;
-        // 지원을 시작한 공고가 보관함에 있으면 앞뒤가 맞지 않는다. 상태를 옮기면 꺼낸다.
-        if (!status.isAutoArchivable()) {
-            this.archivedAt = null;
-        }
+        if (status.isRejectedOrClosed()) archive(Instant.now());
+        else restore();
         this.updatedAt = Instant.now();
     }
 
@@ -138,12 +147,11 @@ public class JobPosting {
         return archivedAt != null;
     }
 
-    /** 마감이 지났고, 아직 내지 않은 공고인가. */
+    /** 탈락·종료이거나 마감이 지났고 아직 내지 않은 공고인가. */
     public boolean shouldAutoArchive(Instant now) {
         return !isArchived()
-                && deadlineAt != null
-                && deadlineAt.isBefore(now)
-                && status.isAutoArchivable();
+                && (status.isRejectedOrClosed()
+                    || (deadlineAt != null && deadlineAt.isBefore(now) && status.isAutoArchivable()));
     }
 
     @PrePersist

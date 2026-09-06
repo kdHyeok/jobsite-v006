@@ -4,7 +4,7 @@ import type { ApplicationStatus, JobPosting, JobPostingPayload, StepResult } fro
 
 export { ApiClientError } from './http'
 
-/** 진행 중 공고를 마감 임박 순으로. 서버가 조회 시점에 마감된 관심·작성중 공고를 보관함으로 옮긴다. */
+/** 진행 중 공고를 마감 임박 순으로. 서버가 마감된 관심·작성 중 공고와 탈락 공고를 보관함으로 옮긴다. */
 export const listPostings = () => request<JobPosting[]>(API.postings)
 
 /** 목록에 없는 공고(보관됨)로 건너뛸 때 쓴다. */

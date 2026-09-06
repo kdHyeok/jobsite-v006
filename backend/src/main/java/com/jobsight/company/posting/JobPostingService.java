@@ -50,7 +50,7 @@ public class JobPostingService {
     }
 
     /**
-     * 진행 중 공고를 D-day 순으로. 조회 시점에 마감 지난 관심·작성중 공고를 보관함으로 옮긴다.
+     * 진행 중 공고를 D-day 순으로. 조회 시점에 마감 지난 관심·작성 중 공고와 탈락 공고를 보관함으로 옮긴다.
      * 스케줄러를 두지 않은 이유는 docs/decisions.md 참고.
      */
     @Transactional
@@ -130,7 +130,7 @@ public class JobPostingService {
 
     private void autoArchiveExpired(UUID ownerId) {
         Instant now = Instant.now();
-        List<JobPosting> expired = repository.findExpiredUnsubmitted(ownerId, now);
+        List<JobPosting> expired = repository.findPendingAutoArchive(ownerId, now);
         if (expired.isEmpty()) {
             return;
         }

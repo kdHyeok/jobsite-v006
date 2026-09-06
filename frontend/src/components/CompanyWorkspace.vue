@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
   ApiClientError,
   createCompany,
@@ -37,6 +37,7 @@ const saving = ref(false)
 const formErrors = ref<Record<string, string>>({})
 const deleteTarget = ref<Company | null>(null)
 const deleting = ref(false)
+const industryOptions = computed(() => [...new Set(companies.value.flatMap((company) => company.industries))].sort())
 
 async function load() {
   loading.value = true
@@ -203,6 +204,7 @@ onMounted(async () => {
       :company="mode === 'edit' ? selected : null"
       :saving="saving"
       :api-field-errors="formErrors"
+      :industry-options="industryOptions"
       @submit="save"
     />
   </Drawer>

@@ -2,7 +2,7 @@
 import { reactive, watch } from 'vue'
 import type { Company } from '../types/company'
 import type { ApplicationStatus, EmploymentType, JobPosting, JobPostingPayload, StepResult } from '../types/posting'
-import { employmentTypeLabels, statusLabels, toLocalInput, toUtcIso } from '../types/posting'
+import { employmentTypeLabels, nowLocalInput, selectableStatuses, statusLabels, toLocalInput, toUtcIso } from '../types/posting'
 
 const props = defineProps<{
   posting: JobPosting | null
@@ -34,7 +34,7 @@ interface FormState {
 
 const emptyForm = (): FormState => ({
   companyId: null, companyName: '', title: '', postingUrl: '',
-  employmentType: 'FULL_TIME', deadlineLocal: '', status: 'INTERESTED', qualifications: '',
+  employmentType: 'FULL_TIME', deadlineLocal: nowLocalInput(), status: 'INTERESTED', qualifications: '',
   positions: [], steps: [],
 })
 
@@ -74,7 +74,7 @@ function removePosition(index: number) {
   form.positions.splice(index, 1)
 }
 function addStep() {
-  form.steps.push({ name: '', result: 'UPCOMING', scheduledLocal: '', memo: '' })
+  form.steps.push({ name: '', result: 'UPCOMING', scheduledLocal: nowLocalInput(), memo: '' })
 }
 function removeStep(index: number) {
   form.steps.splice(index, 1)
@@ -121,7 +121,7 @@ function submit() {
 }
 
 const employmentTypes = Object.entries(employmentTypeLabels) as Array<[EmploymentType, string]>
-const statuses = Object.entries(statusLabels) as Array<[ApplicationStatus, string]>
+const statuses = selectableStatuses.map((status) => [status, statusLabels[status]] as const)
 </script>
 
 <template>

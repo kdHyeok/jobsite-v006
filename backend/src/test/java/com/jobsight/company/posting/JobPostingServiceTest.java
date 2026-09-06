@@ -68,7 +68,7 @@ class JobPostingServiceTest {
         JobPosting interested = posting(past, ApplicationStatus.INTERESTED);
         JobPosting drafting = posting(past, ApplicationStatus.DRAFTING);
         given(currentUser.id()).willReturn(OWNER_ID);
-        given(repository.findExpiredUnsubmitted(any(), any())).willReturn(List.of(interested, drafting));
+        given(repository.findPendingAutoArchive(any(), any())).willReturn(List.of(interested, drafting));
         given(repository.findOpen(OWNER_ID)).willReturn(List.of());
 
         service.findOpen();
@@ -88,6 +88,7 @@ class JobPostingServiceTest {
         assertThat(posting(past, ApplicationStatus.DRAFTING).shouldAutoArchive(now)).isTrue();
         assertThat(posting(past, ApplicationStatus.SUBMITTED).shouldAutoArchive(now)).isFalse();
         assertThat(posting(past, ApplicationStatus.CLOSED).shouldAutoArchive(now)).isFalse();
+        assertThat(posting(null, ApplicationStatus.DOCUMENT_REJECTED).isArchived()).isTrue();
         assertThat(posting(now.plus(1, ChronoUnit.DAYS), ApplicationStatus.INTERESTED).shouldAutoArchive(now)).isFalse();
         assertThat(posting(null, ApplicationStatus.INTERESTED).shouldAutoArchive(now)).isFalse();
     }
@@ -103,6 +104,17 @@ class JobPostingServiceTest {
         assertThat(archived.isArchived()).isFalse();
     }
 
+    @Test
+    void rejectedStatusArchivesAndChangingBackRestores() {
+        JobPosting posting = posting(Instant.now().plus(1, ChronoUnit.DAYS), ApplicationStatus.SUBMITTED);
+
+        posting.changeStatus(ApplicationStatus.WRITTEN_TEST_REJECTED);
+        assertThat(posting.isArchived()).isTrue();
+
+        posting.changeStatus(ApplicationStatus.INTERVIEW_PREP);
+        assertThat(posting.isArchived()).isFalse();
+    }
+
     /** 절차 단계는 배열 순서가 진행 순서고, 결과는 seq 로 바꾼다. */
     @Test
     void stepsKeepOrderAndResultChangesBySeq() {
@@ -113,11 +125,11 @@ class JobPostingServiceTest {
                         new RecruitmentStep("면접", null, null, null))));
 
         p.changeStepResult(0, StepResult.PASSED);
-        p.changeStepResult(1, StepResult.IN_PROGRESS);
+        p.changeStepResult(1, StepResult.PASSED);
 
         assertThat(p.getSteps()).extracting(RecruitmentStep::getName).containsExactly("서류", "인적성", "면접");
         assertThat(p.getSteps()).extracting(RecruitmentStep::getResult)
-                .containsExactly(StepResult.PASSED, StepResult.IN_PROGRESS, StepResult.UPCOMING);
+                .containsExactly(StepResult.PASSED, StepResult.PASSED, StepResult.UPCOMING);
         assertThatThrownBy(() -> p.changeStepResult(3, StepResult.PASSED)).isInstanceOf(IndexOutOfBoundsException.class);
     }
 
