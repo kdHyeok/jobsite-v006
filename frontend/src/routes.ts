@@ -13,6 +13,7 @@ export const ROUTES = {
   home: '/',
   positions: '/positions',
   companies: '/companies',
+  resumes: '/resumes',
   admin: '/admin',
   plugin: '/plugin',
 } as const
@@ -36,6 +37,9 @@ export const API = {
   positionReferences: (id: string) => `/api/positions/${id}/references`,
   references: '/api/references',
   reference: (id: string) => `/api/references/${id}`,
+  resumes: '/api/resumes',
+  resume: (id: string) => `/api/resumes/${id}`,
+  resumeCopy: (id: string) => `/api/resumes/${id}/copy`,
   adminUsers: '/api/admin/users',
   adminUser: (id: string) => `/api/admin/users/${id}`,
   adminUserStatus: (id: string) => `/api/admin/users/${id}/status`,

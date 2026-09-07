@@ -7,6 +7,7 @@ import com.jobsight.company.companycontent.CompanyContentController;
 import com.jobsight.company.position.PositionController;
 import com.jobsight.company.posting.JobPostingController;
 import com.jobsight.company.reference.ReferenceController;
+import com.jobsight.company.resume.ResumeController;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Validator;
 import org.springframework.http.ResponseEntity;
@@ -30,8 +31,8 @@ public class McpTools {
     private final Validator validator;
 
     public McpTools(CompanyController companies, JobPostingController postings, PositionController positions,
-                    ReferenceController references, CompanyContentController contents, AdminController admin,
-                    AuthController auth, McpActions actions, ObjectMapper mapper, Validator validator) {
+                    ReferenceController references, CompanyContentController contents, ResumeController resumes,
+                    AdminController admin, AuthController auth, McpActions actions, ObjectMapper mapper, Validator validator) {
         this.mapper = mapper; this.validator = validator;
         register("company_list", companies, "findAll", true, false);
         register("company_get", companies, "findById", true, false);
@@ -63,6 +64,17 @@ public class McpTools {
         register("company_content_create", contents, "create", false, false);
         register("company_content_update", contents, "update", false, true);
         register("company_content_delete", contents, "delete", false, true);
+        register("resume_list", resumes, "findAll", true, false);
+        register("resume_get", resumes, "findById", true, false);
+        register("resume_create", resumes, "create", false, false);
+        register("resume_update", resumes, "update", false, true);
+        register("resume_copy", resumes, "copy", false, false);
+        register("resume_delete", resumes, "delete", false, true);
+        // 행 도구: 서버가 조회→수정→저장을 한 트랜잭션으로 묶는다. 문서 전체를 되돌려 보내지 않아도 된다.
+        register("resume_basic_update", actions, "updateResumeBasic", false, true);
+        register("resume_row_add", actions, "addResumeRow", false, false);
+        register("resume_row_update", actions, "updateResumeRow", false, true);
+        register("resume_row_delete", actions, "deleteResumeRow", false, true);
         register("account_get", actions, "me", true, false);
         register("account_update", auth, "updateMe", false, true);
         register("admin_users_list", admin, "findUsers", true, false);

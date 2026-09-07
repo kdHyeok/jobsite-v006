@@ -105,3 +105,15 @@ FK `ON DELETE CASCADE`. 소유자 없는 기업 행을 남기면 소유자 격�
 - `PUBLIC_BASE_URL=https://job.donhse.duckdns.org`, `SESSION_COOKIE_SECURE=true`. 앱은 base URL 을 하나만 갖기 때문에 `http://127.0.0.1:8088` 로는 로그인할 수 없다 — 로컬 8088 은 미인증 스모크·디버깅 경로로만 남는다.
 - 프록시가 `ports:` 매핑을 경유하지 않으므로 **이 저장소에서 컨테이너를 재생성하면 그 순간 공개 도메인에 반영된다.** "로컬에서 먼저 확인하고 나중에 노출" 이 성립하지 않는다.
 - 서비스가 공개 인터넷에 노출된다. 접근 제한은 Google OIDC 와 관리자 승인제뿐이다. 동의 화면이 Testing 이면 등록된 테스트 사용자만 로그인된다(「인증은 Google OIDC 하나」 참고).
+
+## 이력서는 JSONB 문서 하나, 섹션 테이블 없음 (V14)
+9개 섹션마다 테이블을 두면 엔티티·DTO·리포지토리 40개가 생긴다. 이력서는 통째로 읽고 통째로 저장하는 문서이고, 자격증만 SQL 로 뽑을 일이 없다. 모양은 `ResumeContent` record 가, 화면은 `types/resume.ts` 의 `SECTIONS` 가 같은 키로 든다. 섹션별 질의가 필요해지면 그때 테이블로 뽑는다 — JSONB 라 마이그레이션에서 `jsonb_array_elements` 로 옮길 수 있다.
+연월은 문자열로 둔다. 사용자는 `2024.03`, `202403`, `현재 교육 중` 처럼 쓰고, 날짜로 파싱하면 그 표현을 잃는다.
+
+## 이력서 편집기는 드로어가 아니라 전체 페이지
+드로어는 520px 고정(design-system 함정)이고 이력서는 섹션 9개·필드 최대 10개짜리 행들이다. 규칙 4(상세·수정은 드로어)의 유일한 예외로 규칙 7 에 적었다. 목록(`/resumes`)과 편집기(`/resumes?focus=<id>`)는 기존 `?focus=` 메커니즘을 그대로 쓴다 — 라우트를 새로 만들지 않았다. 저장은 문서 통째 PUT 이고 행 단위 API 는 없다: 행을 옮기고 지우는 건 화면 안의 일이고, 저장 버튼 하나가 DB 와의 경계다.
+
+## MCP 401 힌트는 `jobsight.read jobsight.write`, admin 은 뺀다
+`WWW-Authenticate`의 `scope`는 "이 리소스에 접근하려면 필요한 scope"이고, 클라이언트 상당수가 이걸 authorize 요청에 그대로 복사한다. 여기에 `jobsight.read`만 적어 두어 일반 사용자가 배포에서 쓰기 도구를 하나도 못 받았다. 리소스 메타데이터에는 세 scope가 다 있었지만 힌트를 우선하는 클라이언트에는 소용이 없었다.
+`jobsight.admin`은 힌트에서 뺀다. 관리자 도구는 scope와 실제 `ROLE_ADMIN`을 함께 요구하므로 일반 사용자가 동의해도 권한이 늘지 않는다 — 동의 화면만 넓어진다. 관리자는 리소스 메타데이터의 `scopes_supported`를 보고 따로 요청한다.
+인가 서버 메타데이터에도 `scopes_supported`를 넣었다. Spring Authorization Server는 이걸 기본으로 내보내지 않아, 힌트 대신 그 문서를 읽는 클라이언트에게는 write가 아예 보이지 않았다.

@@ -52,8 +52,15 @@ public class McpOAuthConfig {
 
     public String base() { return base; }
     public String resource() { return base + ApiPaths.MCP; }
+    /**
+     * 401 의 scope 힌트. 클라이언트는 이 값을 authorize 요청의 scope 로 그대로 쓴다 —
+     * read 만 적으면 일반 사용자가 쓰기 도구를 영영 못 받는다(실제로 그랬다).
+     * admin 은 계정 역할까지 필요해 기본 힌트에서 뺀다. 필요하면 리소스 메타데이터의
+     * scopes_supported 를 보고 따로 요청한다.
+     */
     public String challenge() {
-        return "Bearer resource_metadata=\"" + base + ApiPaths.MCP_METADATA + "\", scope=\"" + READ + "\"";
+        return "Bearer resource_metadata=\"" + base + ApiPaths.MCP_METADATA
+                + "\", scope=\"" + READ + " " + WRITE + "\"";
     }
 
     @Bean
@@ -110,6 +117,9 @@ public class McpOAuthConfig {
                 .with(server, config -> config.authorizationServerMetadataEndpoint(metadata ->
                         metadata.authorizationServerMetadataCustomizer(builder -> builder
                                 .claim("client_id_metadata_document_supported", true)
+                                // Spring 은 scopes_supported 를 기본으로 넣지 않는다.
+                                // 힌트 대신 메타데이터를 읽는 클라이언트도 write 를 볼 수 있어야 한다.
+                                .claim("scopes_supported", SCOPES)
                                 .tokenEndpointAuthenticationMethods(methods -> { methods.clear(); methods.add("none"); }))))
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 .exceptionHandling(errors -> errors.authenticationEntryPoint(

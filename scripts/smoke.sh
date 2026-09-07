@@ -47,6 +47,13 @@ echo ""
 echo "[미인증 차단]"
 check "POST /mcp (Bearer 없음)"             "401" "$(code -X POST -H 'Content-Type: application/json' -d '{}' "$BASE/mcp")"
 check "GET MCP resource metadata"            "200" "$(code "$BASE/.well-known/oauth-protected-resource")"
+# 401 의 scope 힌트를 그대로 쓰는 클라이언트가 많다. read 만 광고하면 쓰기 도구가 통째로 사라진다.
+mcp_challenge="$(curl -sS -o /dev/null -D - -X POST -H 'Content-Type: application/json' -d '{}' "$BASE/mcp" \
+  | tr -d '\r' | grep -i '^www-authenticate:' || true)"
+case "$mcp_challenge" in
+  *"jobsight.read jobsight.write"*) check "MCP challenge advertises write" "read+write" "read+write" ;;
+  *) check "MCP challenge advertises write" "read+write" "${mcp_challenge:-missing}" ;;
+esac
 check "GET OAuth server metadata"            "200" "$(code "$BASE/.well-known/oauth-authorization-server")"
 oauth_metadata="$(curl -fsS "$BASE/.well-known/oauth-authorization-server" | tr -d '\r\n\t ')"
 resource_metadata="$(curl -fsS "$BASE/.well-known/oauth-protected-resource" | tr -d '\r\n\t ')"
@@ -70,6 +77,7 @@ check "GET /api/companies"                  "401"  "$(code "$BASE/api/companies"
 check "GET /api/companies/{id}/contents"    "401"  "$(code "$BASE/api/companies/00000000-0000-0000-0000-000000000000/contents")"
 check "GET /api/postings"                   "401"  "$(code "$BASE/api/postings")"
 check "GET /api/positions"                  "401"  "$(code "$BASE/api/positions")"
+check "GET /api/resumes"                    "401"  "$(code "$BASE/api/resumes")"
 check "GET /api/references"                 "401"  "$(code "$BASE/api/references")"
 check "GET /api/admin/users"                "401"  "$(code "$BASE/api/admin/users")"
 check "GET /api/admin/settings"             "401"  "$(code "$BASE/api/admin/settings")"

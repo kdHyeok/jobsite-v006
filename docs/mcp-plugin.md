@@ -71,6 +71,7 @@ docker compose -f compose.yaml -f compose.mcp.yaml up -d --build
 ```
 
 4. `jobsight.read jobsight.write`를 요청하고 Google 로그인 및 JobSight 동의 화면을 완료한다.
+   이 두 scope는 401의 `WWW-Authenticate` 힌트와 두 메타데이터가 함께 광고하므로 클라이언트가 알아서 요청한다.
    관리자 기능이 필요하면 `jobsight.admin`도 요청한다. scope만으로 관리자 권한이 생기지 않는다.
 5. `account_get`, 기업 목록부터 확인한다. 쿠키/토큰을 사람이 복사하는 방식으로 연결하지 않는다.
    토큰은 1시간 유효하며 만료·서버 재시작 후 OAuth로 다시 연결한다. refresh_token은 발급하지 않는다.
@@ -89,12 +90,16 @@ ZIP 루트는 `.codex-plugin/plugin.json`, `.mcp.json`, `skills/jobsight/SKILL.m
 
 ## 도구 계약과 검증 범위
 
-도구는 38개이며 입력은 `id`, `companyId`, `postingId`, `q`, `archived`, `seq`, `request`처럼 실제 메서드 인자를 사용한다.
+도구는 48개이며 입력은 `id`, `companyId`, `postingId`, `q`, `archived`, `seq`, `section`, `index`, `request`처럼 실제 메서드 인자를 사용한다.
 도구명·동작별 사용법은 스킬에 있다. `/mcp`의 `tools/list`는 연결 계정의 scope/역할에 따라 목록을 줄인다.
 관리자 도구 7개는 일반 사용자에게 노출하지 않으며 직접 이름을 호출해도 거부한다.
 `posting_list`는 자동 보관을 일으켜 쓰기 scope와 readOnlyHint=false를 사용한다.
 뉴스/유튜브·참고 상세 조회는 소유자 필터된 목록에서 ID를 찾는다.
 MCP용 `position_create`는 기존 `PositionService` 트랜잭션에서 공고 소유권을 검증하고 직무를 추가한다.
+이력서 행 도구(`resume_basic_update`, `resume_row_add/update/delete`)는 REST 에 없는 MCP 전용이다. REST 는 문서 통째 PUT 만 있고,
+MCP 는 문서 전체를 되돌려 보내기 어려워 서버가 조회→한 군데 수정→저장을 한 트랜잭션으로 묶는다(`ResumeService.mutateRows`).
+행 입력 `ResumeRowRequest` 는 8개 섹션 필드의 합집합 record 다 — 스키마 생성기가 Map 을 그리지 못하고 섹션별 도구는 24개가 되기 때문.
+서버가 `section` enum 의 record 로 엄격 변환해 다른 섹션 필드는 `UNKNOWN_ROW_FIELD` 로 거부한다. `index` 는 0부터.
 
 인증 테스트는 외부 Google 자격증명 없이 인증된 세션을 주입하고 실제 Spring OAuth 필터의 코드 발급/교환을 검증한다.
 실제 Google 왕복 및 ChatGPT 서비스 연결과 같다고 간주하지 않는다.
@@ -125,3 +130,21 @@ MCP용 `position_create`는 기존 `PositionService` 트랜잭션에서 공고 �
 - 프런트 타입 검사·43개 테스트, 플러그인/스킬 구조 검사 통과. 로컬 Compose 재빌드 후 스모크 35개 PASS.
 - 내장 브라우저에서 공개 가이드, URL 복사, Google 로그인 후 사이트 복귀를 확인했다. 새 CIMD 방식의 실제 ChatGPT OAuth 왕복은 배포 후 확인해야 한다.
 - 위 수동 callback 설정은 정적 클라이언트의 대안으로 유지된다. 새 CIMD 방식에는 개별 callback 환경변수 등록이 필요 없다.
+
+## 함정 — scope는 세 곳에서 광고된다
+
+클라이언트가 요청할 scope를 정하는 경로가 셋이고, 하나만 좁아도 사용자는 그 권한을 못 받는다.
+
+| 어디 | 무엇을 광고하나 |
+|---|---|
+| 401 의 `WWW-Authenticate` (`McpOAuthConfig.challenge()`) | `jobsight.read jobsight.write` |
+| 리소스 메타데이터 `/.well-known/oauth-protected-resource` | `SCOPES` 전부(admin 포함) |
+| 인가 서버 메타데이터 `/.well-known/oauth-authorization-server` | `SCOPES` 전부 — Spring 기본값에는 없어 `claim()`으로 직접 넣는다 |
+
+**실제로 겪은 일**: `challenge()`가 `scope="jobsight.read"` 하나만 적고 있었다. ChatGPT 커넥터를 비롯한
+클라이언트 상당수가 이 힌트를 authorize 요청에 그대로 쓰기 때문에 일반 사용자는 읽기 토큰만 받았고,
+`McpTools.permitted()`가 쓰기 도구를 전부 걸러 `tools/list`에서 사라졌다 — 화면에는 "읽기 권한만 있음"으로 보였다.
+`scripts/smoke.sh`의 `MCP challenge advertises write`와 `McpChallengeTest`가 이 회귀를 잡는다.
+
+`jobsight.admin`은 기본 힌트에서 뺀다. 관리자 도구는 scope와 실제 `ROLE_ADMIN`을 둘 다 요구하므로,
+일반 사용자 동의 화면에 올려 봐야 아무 권한도 늘지 않고 요청만 넓어진다.

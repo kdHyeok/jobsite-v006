@@ -8,6 +8,7 @@ import com.jobsight.company.companycontent.*;
 import com.jobsight.company.position.*;
 import com.jobsight.company.posting.*;
 import com.jobsight.company.reference.*;
+import com.jobsight.company.resume.*;
 import com.jobsight.company.setting.AppSettingService;
 import com.jobsight.company.user.AppUserService;
 import jakarta.validation.Validation;
@@ -26,6 +27,7 @@ class McpToolsTest {
     PositionService positions = mock(PositionService.class);
     ReferenceService references = mock(ReferenceService.class);
     CompanyContentService contents = mock(CompanyContentService.class);
+    ResumeService resumes = mock(ResumeService.class);
     AppUserService users = mock(AppUserService.class);
     AppSettingService settings = mock(AppSettingService.class);
     CurrentUser current = new CurrentUser();
@@ -36,15 +38,15 @@ class McpToolsTest {
         var validator = Validation.buildDefaultValidatorFactory().getValidator();
         tools = new McpTools(new CompanyController(companies), new JobPostingController(postings),
                 new PositionController(positions), new ReferenceController(references), new CompanyContentController(contents),
-                new AdminController(users, settings, current), new AuthController(users, settings, current, null),
-                new McpActions(current, users, positions, references, contents), JsonMapper.builder().findAndAddModules().build(), validator);
+                new ResumeController(resumes), new AdminController(users, settings, current), new AuthController(users, settings, current, null),
+                new McpActions(current, users, positions, references, contents, resumes), JsonMapper.builder().findAndAddModules().build(), validator);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null,
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }
 
     @Test void catalogScopesAndAdministratorRoleAreEnforced() {
-        assertThat(tools.list(principal)).hasSize(31);
+        assertThat(tools.list(principal)).hasSize(41);
         assertThat(tools.list(new McpPrincipal(principal.userId(), Set.of(McpOAuthConfig.READ))))
                 .allSatisfy(tool -> assertThat(((Map<?, ?>) tool.get("annotations")).get("readOnlyHint")).isEqualTo(true));
         assertThatThrownBy(() -> tools.call("admin_users_list", Map.of(), principal))
@@ -77,6 +79,21 @@ class McpToolsTest {
         tools.call("company_content_delete", Map.of("companyId", id.toString(), "id", reference.toString()), principal);
         verify(contents).delete(id, reference);
     }
+    /** 행 도구는 섹션 enum 과 0-based index 를 그대로 서비스에 넘긴다. */
+    @Test void resumeRowToolsPassSectionAndIndex() {
+        UUID id = UUID.randomUUID();
+        tools.call("resume_row_add", Map.of("id", id.toString(), "section", "certificates",
+                "request", Map.of("name", "SQLD", "acquiredYm", "2026.03")), principal);
+        verify(resumes).addRow(eq(id), eq(ResumeSection.certificates), argThat(r -> r.name().equals("SQLD") && r.school() == null));
+        tools.call("resume_row_delete", Map.of("id", id.toString(), "section", "projects", "index", 2), principal);
+        verify(resumes).deleteRow(id, ResumeSection.projects, 2);
+        assertThatThrownBy(() -> tools.call("resume_row_delete", Map.of("id", id.toString(), "section", "nope", "index", 0), principal))
+                .isInstanceOf(RuntimeException.class);
+        var schema = JsonMapper.builder().build().writeValueAsString(tools.list(principal).stream()
+                .filter(t -> t.get("name").equals("resume_row_add")).findFirst().orElseThrow().get("inputSchema"));
+        for (var section : ResumeSection.values()) assertThat(schema).contains("\"" + section.name() + "\"");
+    }
+
     @Test void schemaContainsWholeCompanyDtoAndStatusEnums() {
         var company = tools.list(principal).stream().filter(t -> t.get("name").equals("company_create")).findFirst().orElseThrow();
         String schema = JsonMapper.builder().build().writeValueAsString(company.get("inputSchema"));

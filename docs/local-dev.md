@@ -63,6 +63,8 @@ MSYS_NO_PATHCONV=1 docker run --rm -v jobsite-v006-gradle-cache:/root/.gradle \
 # 통합 테스트가 Testcontainers 로 PostgreSQL 을 띄우므로 Docker 소켓을 마운트한다.
 # 컨테이너 안의 JVM 은 형제 컨테이너를 host.docker.internal 로만 볼 수 있고,
 # Ryuk(정리 컨테이너)은 이 구성에서 뜨지 않으므로 끈다.
+# 저장소 루트("$PWD")를 마운트하고 backend 로 들어간다 — backend/ 만 마운트하면
+# processResources 가 ../plugins/jobsight 를 못 찾아 McpOAuthTest 2건이 "Packaged JobSight skill is missing" 으로 깨진다.
 MSYS_NO_PATHCONV=1 docker run --rm \
   -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal -e TESTCONTAINERS_RYUK_DISABLED=true \
   -v /var/run/docker.sock:/var/run/docker.sock \

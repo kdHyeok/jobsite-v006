@@ -6,6 +6,7 @@ import CompanyWorkspace from './components/CompanyWorkspace.vue'
 import LoginView from './components/LoginView.vue'
 import PositionBoard from './components/PositionBoard.vue'
 import PostingBoard from './components/PostingBoard.vue'
+import ResumeBoard from './components/ResumeBoard.vue'
 import UserMenu from './components/UserMenu.vue'
 import PluginGuide from './components/PluginGuide.vue'
 import { FOCUS_QUERY, ROUTES } from './routes'
@@ -29,6 +30,7 @@ const isAdmin = computed(() => me.value.role === 'ADMIN')
 const onAdminRoute = computed(() => path.value.startsWith(ROUTES.admin))
 const onPositionsRoute = computed(() => path.value.startsWith(ROUTES.positions))
 const onCompaniesRoute = computed(() => path.value.startsWith(ROUTES.companies))
+const onResumesRoute = computed(() => path.value.startsWith(ROUTES.resumes))
 const onPluginRoute = computed(() => path.value === ROUTES.plugin)
 /** 다른 화면에서 열어 달라고 넘긴 항목 id. 각 보드가 목록을 읽은 뒤 그 드로어를 연다. */
 const focusId = computed(() => new URLSearchParams(search.value).get(FOCUS_QUERY))
@@ -92,11 +94,11 @@ onUnmounted(() => {
         JobSight
       </button>
 
-      <!-- 세그먼트에는 성격이 같은 세 화면만. 관리자는 오른쪽에 따로. -->
+      <!-- 세그먼트에는 성격이 같은 네 화면만. 관리자는 오른쪽에 따로. -->
       <nav v-if="me.authenticated" class="segmented" aria-label="화면 전환">
         <button
           type="button"
-          :class="{ active: !onAdminRoute && !onPositionsRoute && !onCompaniesRoute && !onPluginRoute }"
+          :class="{ active: !onAdminRoute && !onPositionsRoute && !onCompaniesRoute && !onResumesRoute && !onPluginRoute }"
           @click="navigate(ROUTES.home)"
         >
           채용공고
@@ -106,6 +108,9 @@ onUnmounted(() => {
         </button>
         <button type="button" :class="{ active: onCompaniesRoute }" @click="navigate(ROUTES.companies)">
           기업
+        </button>
+        <button type="button" :class="{ active: onResumesRoute }" @click="navigate(ROUTES.resumes)">
+          이력서
         </button>
       </nav>
       <span v-else />
@@ -167,6 +172,14 @@ onUnmounted(() => {
       v-else-if="onCompaniesRoute"
       :focus="focusId"
       @open-posting="navigate(ROUTES.home, $event)"
+    />
+
+    <!-- 이력서는 목록(/resumes)과 편집기(/resumes?focus=<id>)를 한 보드가 맡는다. 라우팅은 여기서. -->
+    <ResumeBoard
+      v-else-if="onResumesRoute"
+      :focus="focusId"
+      @open-resume="navigate(ROUTES.resumes, $event)"
+      @close-resume="navigate(ROUTES.resumes)"
     />
 
     <PostingBoard

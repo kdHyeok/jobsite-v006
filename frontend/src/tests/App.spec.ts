@@ -77,6 +77,21 @@ vi.mock('../api/references', () => {
   }
 })
 
+vi.mock('../api/resumes', () => {
+  class ApiClientError extends Error {
+    fieldErrors = {}
+  }
+  return {
+    ApiClientError,
+    listResumes: vi.fn(() => Promise.resolve([])),
+    getResume: vi.fn(),
+    createResume: vi.fn(),
+    updateResume: vi.fn(),
+    copyResume: vi.fn(),
+    deleteResume: vi.fn(),
+  }
+})
+
 vi.mock('../api/admin', () => ({
   listUsers: vi.fn(() => Promise.resolve([])),
   fetchSettings: vi.fn(() =>
@@ -169,7 +184,7 @@ describe('App 접근 제어', () => {
     expect(wrapper.find('.auth-card').exists()).toBe(false)
     // 홈은 채용공고. 세그먼트 순서: 채용공고 → 모집 직무 → 기업
     expect(wrapper.find('.page-head').text()).toContain('채용공고')
-    expect(wrapper.findAll('.segmented button').map((b) => b.text())).toEqual(['채용공고', '모집 직무', '기업'])
+    expect(wrapper.findAll('.segmented button').map((b) => b.text())).toEqual(['채용공고', '모집 직무', '기업', '이력서'])
     // 아바타는 이름 첫 글자, 툴팁은 이메일
     const avatar = wrapper.get('.avatar')
     expect(avatar.text()).toBe('홍')
