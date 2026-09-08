@@ -1,5 +1,6 @@
 package com.jobsight.company.admin;
 
+import com.jobsight.company.admin.dto.UserDataCountResponse;
 import com.jobsight.company.auth.CurrentUser;
 import com.jobsight.company.common.ApiPaths;
 import com.jobsight.company.setting.AppSettingService;
@@ -33,11 +34,14 @@ import java.util.UUID;
 public class AdminController {
     private final AppUserService users;
     private final AppSettingService settings;
+    private final AdminStatsService stats;
     private final CurrentUser currentUser;
 
-    public AdminController(AppUserService users, AppSettingService settings, CurrentUser currentUser) {
+    public AdminController(AppUserService users, AppSettingService settings, AdminStatsService stats,
+                           CurrentUser currentUser) {
         this.users = users;
         this.settings = settings;
+        this.stats = stats;
         this.currentUser = currentUser;
     }
 
@@ -45,6 +49,14 @@ public class AdminController {
     @GetMapping("/users")
     public List<UserResponse> findUsers() {
         return users.findAll();
+    }
+
+    @Operation(summary = "계정별 등록 데이터 수",
+            description = "계정이 등록한 기업·채용공고·모집 직무 개수. 개수만 돌려주고 내용은 담지 않는다. "
+                    + "데이터가 하나도 없는 계정은 응답에서 빠진다.")
+    @GetMapping("/users/counts")
+    public List<UserDataCountResponse> findUserDataCounts() {
+        return stats.countByUser();
     }
 
     @Operation(summary = "계정 상태 변경",

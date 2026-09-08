@@ -128,3 +128,10 @@ FK `ON DELETE CASCADE`. 소유자 없는 기업 행을 남기면 소유자 격�
 `server.tomcat.use-relative-redirects: true` 도 검토했다. `Location` 이 `/oauth2/authorization/google` 로 나가 스킴을 조립할 일이 아예 없어지므로 더 강한 수정이다. 채택하지 않았다: Tomcat 이 이 설정에서 `sendRedirect` 를 302 대신 **303** 으로 내보내고, 그러면 스모크의 `GET /oauth2/authorization/google → 302` 단정이 깨진다. GET 리다이렉트에서 303 은 기능상 같지만, 증상 하나를 고치려고 기존 가드레일의 기대값을 낮추는 거래는 하지 않았다. 나중에 상태코드까지 함께 다루기로 하면 그때 두 층으로 올린다.
 
 `scripts/smoke.sh` 가 authorize 진입점의 `Location` 이 `http://` 로 시작하면 실패한다.
+
+## 관리자에게는 계정별 "개수"만 연다
+
+소유자 격리(불변 조건 1)는 타인의 행을 404 로 감춘다. 관리자 화면에서 어떤 계정이 실제로 쓰이는지
+보려면 이 규칙에 구멍을 내야 했는데, **집계 숫자에 한정해서만** 냈다 — `GET /api/admin/users/counts`
+는 기업·공고·직무의 개수만 돌려주고 기업명·공고 제목 같은 내용은 어떤 관리자 엔드포인트도 내주지 않는다.
+"관리자니까 다 볼 수 있다"로 넓히지 않는다. 넓히려면 여기부터 다시 읽는다. — docs/admin.md

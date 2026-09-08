@@ -1,5 +1,6 @@
 package com.jobsight.company.company;
 
+import com.jobsight.company.common.OwnerCount;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,6 +24,10 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
     List<Company> findAllByIdInAndOwnerId(Collection<UUID> ids, UUID ownerId);
 
     long countByOwnerId(UUID ownerId);
+
+    /** 관리자 화면의 계정별 등록 수. 개수만 낸다 — 내용은 내보내지 않는다(docs/admin.md). */
+    @Query("select new com.jobsight.company.common.OwnerCount(c.ownerId, count(c)) from Company c group by c.ownerId")
+    List<OwnerCount> countGroupedByOwner();
 
     /** 공백 제거·소문자 키로 찾는다. 공고 폼의 직접 입력이 기존 기업을 재사용하기 위해. */
     @Query("select c from Company c where c.ownerId = :ownerId and lower(replace(c.name, ' ', '')) = :key")

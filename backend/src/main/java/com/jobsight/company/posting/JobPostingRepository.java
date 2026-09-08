@@ -1,5 +1,6 @@
 package com.jobsight.company.posting;
 
+import com.jobsight.company.common.OwnerCount;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +18,10 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, UUID> {
      * findById 후 소유자를 비교하는 방식은 비교를 빠뜨리면 그대로 유출이 되므로 쓰지 않는다.
      */
     Optional<JobPosting> findByIdAndOwnerId(UUID id, UUID ownerId);
+
+    /** 관리자 화면의 계정별 등록 수. 개수만 낸다 — 내용은 내보내지 않는다(docs/admin.md). */
+    @Query("select new com.jobsight.company.common.OwnerCount(p.ownerId, count(p)) from JobPosting p group by p.ownerId")
+    List<OwnerCount> countGroupedByOwner();
 
     /** 직무 목록에서 공고 제목·마감을 한 번에 채우기 위한 조회(N+1 방지). */
     List<JobPosting> findAllByIdInAndOwnerId(Collection<UUID> ids, UUID ownerId);

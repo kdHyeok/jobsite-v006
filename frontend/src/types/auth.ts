@@ -29,6 +29,14 @@ export interface AdminUser {
   updatedAt: string
 }
 
+/** 계정 하나가 등록한 데이터 수. 개수만 온다 — 내용은 관리자에게도 열리지 않는다. */
+export interface UserDataCount {
+  userId: string
+  companies: number
+  postings: number
+  positions: number
+}
+
 export interface AppSettings {
   autoApproveSignup: boolean
   updatedAt: string
