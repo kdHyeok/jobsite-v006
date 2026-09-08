@@ -117,3 +117,14 @@ FK `ON DELETE CASCADE`. 소유자 없는 기업 행을 남기면 소유자 격�
 `WWW-Authenticate`의 `scope`는 "이 리소스에 접근하려면 필요한 scope"이고, 클라이언트 상당수가 이걸 authorize 요청에 그대로 복사한다. 여기에 `jobsight.read`만 적어 두어 일반 사용자가 배포에서 쓰기 도구를 하나도 못 받았다. 리소스 메타데이터에는 세 scope가 다 있었지만 힌트를 우선하는 클라이언트에는 소용이 없었다.
 `jobsight.admin`은 힌트에서 뺀다. 관리자 도구는 scope와 실제 `ROLE_ADMIN`을 함께 요구하므로 일반 사용자가 동의해도 권한이 늘지 않는다 — 동의 화면만 넓어진다. 관리자는 리소스 메타데이터의 `scopes_supported`를 보고 따로 요청한다.
 인가 서버 메타데이터에도 `scopes_supported`를 넣었다. Spring Authorization Server는 이걸 기본으로 내보내지 않아, 힌트 대신 그 문서를 읽는 클라이언트에게는 write가 아예 보이지 않았다.
+
+## 리다이렉트 스킴은 내부 nginx 가 `X-Forwarded-Proto` 를 보존해서 막는다
+미인증 `/oauth2/authorize` 는 Google 로그인으로 보내는데, 그 `Location` 이 `http://job.donhse.duckdns.org/...` 로 나갔다. 앱은 `sendRedirect("/oauth2/authorization/google")` 로 상대 경로를 쓰지만 Tomcat 이 절대 URL 로 바꾸고, 그때 쓰는 스킴이 잘못됐다: 앞단 프록시가 `X-Forwarded-Proto: https` 를 넣어도 내부 nginx 가 `$scheme`(컨테이너 안이라 항상 http)으로 덮어써 버렸다.
+
+브라우저에서는 드러나지 않는다. 앞단이 HSTS 를 보내고 80 이 301 로 올려 주기 때문이다. 끊기는 쪽은 HSTS 를 모르는 비브라우저 OAuth 클라이언트다.
+
+내부 nginx 가 스킴을 보존하게 했다. Host 는 여전히 `$http_host` 원본만 쓰고, 스킴만 예외로 앞단 값을 받는다. 값이 정확히 `"https"` 일 때만 받아들이고 나머지는 `$scheme` 으로 떨어뜨려 임의 문자열을 그대로 신뢰하지는 않는다. 로컬 `127.0.0.1:8088` 직결은 http 로 남는다 — 그 포트는 루프백 전용이므로 헤더를 위조할 수 있는 위치라면 이미 호스트 접근 권한이 있는 셈이다.
+
+`server.tomcat.use-relative-redirects: true` 도 검토했다. `Location` 이 `/oauth2/authorization/google` 로 나가 스킴을 조립할 일이 아예 없어지므로 더 강한 수정이다. 채택하지 않았다: Tomcat 이 이 설정에서 `sendRedirect` 를 302 대신 **303** 으로 내보내고, 그러면 스모크의 `GET /oauth2/authorization/google → 302` 단정이 깨진다. GET 리다이렉트에서 303 은 기능상 같지만, 증상 하나를 고치려고 기존 가드레일의 기대값을 낮추는 거래는 하지 않았다. 나중에 상태코드까지 함께 다루기로 하면 그때 두 층으로 올린다.
+
+`scripts/smoke.sh` 가 authorize 진입점의 `Location` 이 `http://` 로 시작하면 실패한다.

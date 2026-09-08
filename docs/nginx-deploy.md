@@ -7,6 +7,7 @@
 규칙:
 - `absolute_redirect off;` — 리다이렉트는 상대 경로. 켜면 `Location: http://127.0.0.1/` 처럼 포트가 빠진다.
 - 프록시 헤더는 `$http_host`(브라우저가 보낸 Host 원본). `$host` 는 포트를 떼고 `$server_port` 는 80 이다.
+- 스킴만은 앞단 값을 받는다: `X-Forwarded-Proto` 가 정확히 `https` 면 그대로 넘기고, 아니면 `$scheme`(=http). 이 nginx 는 평문 80 을 들으므로 `$scheme` 을 그대로 넘기면 Tomcat 이 상대 리다이렉트를 `http://` 절대 URL 로 바꾼다. 덮어쓰면 authorize 진입점의 `Location` 이 평문으로 나가 HSTS 를 모르는 OAuth 클라이언트가 끊긴다(`docs/decisions.md`).
 - `X-Forwarded-Port` 를 보내지 않는다. 절대 URL 이 필요한 곳은 백엔드가 `PUBLIC_BASE_URL` 로 만든다.
 
 백엔드로 넘기는 접두사(파일 상단 표와 동일): `/api/`, `/oauth2/`, `/login/`, `/swagger-ui`, `/v3/`, `/mcp`, `/.well-known/`.
@@ -40,7 +41,7 @@ MCP의 정확한 OAuth callback 설정은 선택적 `compose.mcp.yaml`에서 `MC
 ```
 
 - TLS 는 Let's Encrypt `donhse.duckdns.org` 인증서의 SAN 으로 `job.` 를 덮는다. 종단은 프록시가 하고 이 저장소는 평문 80 만 다룬다.
-- 프록시가 `X-Forwarded-Proto https` 를 고정으로 넣는다. Spring 은 `forward-headers-strategy: framework` 로 이를 받아 secure 판정에 쓴다. `redirect_uri` 는 여기에 의존하지 않고 `PUBLIC_BASE_URL` 로 조립한다.
+- 프록시가 `X-Forwarded-Proto https` 를 고정으로 넣는다. Spring 은 `forward-headers-strategy: framework` 로 이를 받아 secure 판정에 쓴다. `redirect_uri` 는 여기에 의존하지 않고 `PUBLIC_BASE_URL` 로 조립한다. 내부 nginx 가 이 값을 덮어쓰지 않아야 한다 — 덮어쓰면 authorize 진입점의 `Location` 이 평문으로 나간다.
 - 프록시가 `proxy_set_header Host $host` 를 쓴다. 공개 포트가 기본 443 이라 지금은 포트 누락이 없다. **비표준 포트로 옮기면 그 순간 `$host` 함정에 걸린다** — 그때는 `$http_host` 로 바꾼다.
 - upstream 을 변수(`set $job_up …`)로 두고 `resolver 127.0.0.11` 로 런타임 재해석한다. 이게 없으면 컨테이너를 재생성한 뒤 프록시가 죽은 IP 를 계속 잡는다.
 

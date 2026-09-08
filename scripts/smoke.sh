@@ -55,6 +55,16 @@ case "$mcp_challenge" in
   *) check "MCP challenge advertises write" "read+write" "${mcp_challenge:-missing}" ;;
 esac
 check "GET OAuth server metadata"            "200" "$(code "$BASE/.well-known/oauth-authorization-server")"
+# 미인증 authorize 는 Google 로그인으로 보낸다. Tomcat 이 절대 URL 로 바꾸면 앞단 스킴을
+# 잘못 잡아 http:// 로 나가고, HSTS 를 모르는 OAuth 클라이언트가 평문 홉에서 끊긴다.
+mcp_az_location="$(curl -sS -o /dev/null -D - \
+  "$BASE/oauth2/authorize?response_type=code&client_id=jobsight-plugin&redirect_uri=https%3A%2F%2Fchatgpt.com%2Fconnector_platform_oauth_redirect&scope=jobsight.read+jobsight.write&state=smoke&resource=$(printf '%s' "$BASE/mcp" | sed 's/:/%3A/g; s#/#%2F#g')&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256" \
+  2>/dev/null | tr -d '\r' | awk 'tolower($1)=="location:"{print $2}')"
+case "$mcp_az_location" in
+  http://*) check "authorize 진입점 Location (평문 금지)" "relative-or-https" "$mcp_az_location" ;;
+  "")       check "authorize 진입점 Location (평문 금지)" "relative-or-https" "(없음)" ;;
+  *)        check "authorize 진입점 Location (평문 금지)" "relative-or-https" "relative-or-https" ;;
+esac
 oauth_metadata="$(curl -fsS "$BASE/.well-known/oauth-authorization-server" | tr -d '\r\n\t ')"
 resource_metadata="$(curl -fsS "$BASE/.well-known/oauth-protected-resource" | tr -d '\r\n\t ')"
 for field in "\"issuer\":\"$BASE\"" "\"authorization_endpoint\":\"$BASE/oauth2/authorize\"" "\"token_endpoint\":\"$BASE/oauth2/token\""; do

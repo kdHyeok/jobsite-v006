@@ -30,7 +30,7 @@ server:
         # Lax 는 top-level GET 네비게이션만 허용하므로 cross-site POST/fetch 는 여전히 막히고,
         # CSRF 방어의 주축은 XSRF-TOKEN 쿠키와 X-XSRF-TOKEN 헤더가 담당한다.
         same-site: lax
-        # TLS 종단(tailscale serve) 뒤에 둘 때만 true. 로컬 http 접속에서는 false여야 한다.
+        # TLS 종단(리버스 프록시) 뒤에 둘 때만 true. 로컬 http 접속에서는 false여야 한다.
         secure: ${SESSION_COOKIE_SECURE:false}
 
 app:
