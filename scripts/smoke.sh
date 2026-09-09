@@ -60,11 +60,13 @@ check "GET OAuth server metadata"            "200" "$(code "$BASE/.well-known/oa
 mcp_az_location="$(curl -sS -o /dev/null -D - \
   "$BASE/oauth2/authorize?response_type=code&client_id=jobsight-plugin&redirect_uri=https%3A%2F%2Fchatgpt.com%2Fconnector_platform_oauth_redirect&scope=jobsight.read+jobsight.write&state=smoke&resource=$(printf '%s' "$BASE/mcp" | sed 's/:/%3A/g; s#/#%2F#g')&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256" \
   2>/dev/null | tr -d '\r' | awk 'tolower($1)=="location:"{print $2}')"
+# BASE 가 평문이면(로컬 8088) http Location 이 정상이다. 다운그레이드만 잡는다.
 case "$mcp_az_location" in
-  http://*) check "authorize 진입점 Location (평문 금지)" "relative-or-https" "$mcp_az_location" ;;
-  "")       check "authorize 진입점 Location (평문 금지)" "relative-or-https" "(없음)" ;;
-  *)        check "authorize 진입점 Location (평문 금지)" "relative-or-https" "relative-or-https" ;;
+  "")       az_actual="(없음)" ;;
+  http://*) case "$BASE" in https://*) az_actual="$mcp_az_location" ;; *) az_actual="relative-or-https" ;; esac ;;
+  *)        az_actual="relative-or-https" ;;
 esac
+check "authorize 진입점 Location (평문 금지)" "relative-or-https" "$az_actual"
 oauth_metadata="$(curl -fsS "$BASE/.well-known/oauth-authorization-server" | tr -d '\r\n\t ')"
 resource_metadata="$(curl -fsS "$BASE/.well-known/oauth-protected-resource" | tr -d '\r\n\t ')"
 for field in "\"issuer\":\"$BASE\"" "\"authorization_endpoint\":\"$BASE/oauth2/authorize\"" "\"token_endpoint\":\"$BASE/oauth2/token\""; do
@@ -90,6 +92,7 @@ check "GET /api/positions"                  "401"  "$(code "$BASE/api/positions"
 check "GET /api/resumes"                    "401"  "$(code "$BASE/api/resumes")"
 check "GET /api/references"                 "401"  "$(code "$BASE/api/references")"
 check "GET /api/admin/users"                "401"  "$(code "$BASE/api/admin/users")"
+check "GET /api/admin/users/counts"         "401"  "$(code "$BASE/api/admin/users/counts")"
 check "GET /api/admin/settings"             "401"  "$(code "$BASE/api/admin/settings")"
 check "GET /swagger-ui/index.html"          "401"  "$(code "$BASE/swagger-ui/index.html")"
 check "GET /v3/api-docs"                    "401"  "$(code "$BASE/v3/api-docs")"

@@ -1,6 +1,7 @@
 package com.jobsight.company.mcp;
 
 import com.jobsight.company.admin.AdminController;
+import com.jobsight.company.admin.AdminStatsService;
 import com.jobsight.company.auth.*;
 import com.jobsight.company.company.*;
 import com.jobsight.company.company.dto.CompanyRequest;
@@ -30,6 +31,7 @@ class McpToolsTest {
     ResumeService resumes = mock(ResumeService.class);
     AppUserService users = mock(AppUserService.class);
     AppSettingService settings = mock(AppSettingService.class);
+    AdminStatsService stats = mock(AdminStatsService.class);
     CurrentUser current = new CurrentUser();
     McpTools tools;
     McpPrincipal principal = new McpPrincipal(UUID.randomUUID(), Set.copyOf(McpOAuthConfig.SCOPES));
@@ -38,7 +40,7 @@ class McpToolsTest {
         var validator = Validation.buildDefaultValidatorFactory().getValidator();
         tools = new McpTools(new CompanyController(companies), new JobPostingController(postings),
                 new PositionController(positions), new ReferenceController(references), new CompanyContentController(contents),
-                new ResumeController(resumes), new AdminController(users, settings, current), new AuthController(users, settings, current, null),
+                new ResumeController(resumes), new AdminController(users, settings, stats, current), new AuthController(users, settings, current, null),
                 new McpActions(current, users, positions, references, contents, resumes), JsonMapper.builder().findAndAddModules().build(), validator);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null,
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))));

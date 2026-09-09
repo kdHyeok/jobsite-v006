@@ -1,8 +1,11 @@
 import { request } from './http'
 import { API } from '../routes'
-import type { AdminUser, AppSettings, UserRole, UserStatus } from '../types/auth'
+import type { AdminUser, AppSettings, UserDataCount, UserRole, UserStatus } from '../types/auth'
 
 export const listUsers = () => request<AdminUser[]>(API.adminUsers)
+
+/** 데이터가 없는 계정은 빠져서 온다. 화면이 0 으로 채운다. */
+export const listUserDataCounts = () => request<UserDataCount[]>(API.adminUserCounts)
 
 export const changeUserStatus = (id: string, status: UserStatus) =>
   request<AdminUser>(API.adminUserStatus(id), {

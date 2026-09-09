@@ -78,6 +78,7 @@ public class McpTools {
         register("account_get", actions, "me", true, false);
         register("account_update", auth, "updateMe", false, true);
         register("admin_users_list", admin, "findUsers", true, false);
+        register("admin_user_counts", admin, "findUserDataCounts", true, false);
         register("admin_user_set_status", admin, "changeStatus", false, true);
         register("admin_user_set_role", admin, "changeRole", false, true);
         register("admin_user_set_name", admin, "changeName", false, true);

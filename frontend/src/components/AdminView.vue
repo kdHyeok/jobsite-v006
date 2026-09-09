@@ -8,15 +8,21 @@ import {
   deleteUser,
   fetchSettings,
   listUsers,
+  listUserDataCounts,
   updateAutoApproveSignup,
 } from '../api/admin'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { roleLabels, userStatusLabels } from '../types/auth'
-import type { AdminUser, Me, UserRole, UserStatus } from '../types/auth'
+import type { AdminUser, Me, UserDataCount, UserRole, UserStatus } from '../types/auth'
 
 const props = defineProps<{ me: Me }>()
 
 const users = ref<AdminUser[]>([])
+/**
+ * 계정별 등록 수. 계정 목록과 따로 들고 있다 — 상태·권한을 바꾸면 그 행을 새 UserResponse 로
+ * 갈아끼우는데, 같은 객체에 넣었으면 그때마다 개수가 사라진다.
+ */
+const dataCounts = ref(new Map<string, UserDataCount>())
 const autoApproveSignup = ref(false)
 const loading = ref(true)
 const errorMessage = ref('')
@@ -39,6 +45,10 @@ const statusTone: Record<UserStatus, string> = {
 
 const pendingCount = computed(() => users.value.filter((user) => user.status === 'PENDING').length)
 
+const EMPTY_COUNT = { companies: 0, postings: 0, positions: 0 }
+/** 응답에 없는 계정은 등록한 데이터가 하나도 없는 계정이다. */
+const countsOf = (id: string) => dataCounts.value.get(id) ?? EMPTY_COUNT
+
 function report(error: unknown, fallback: string) {
   errorMessage.value = error instanceof ApiClientError ? error.message : fallback
 }
@@ -47,9 +57,15 @@ async function load() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [list, settings] = await Promise.all([listUsers(), fetchSettings()])
+    // 개수는 곁다리다. 못 읽어도 계정 관리는 되어야 하므로 여기서 삼킨다.
+    const [list, settings, counts] = await Promise.all([
+      listUsers(),
+      fetchSettings(),
+      listUserDataCounts().catch(() => [] as UserDataCount[]),
+    ])
     users.value = list
     autoApproveSignup.value = settings.autoApproveSignup
+    dataCounts.value = new Map(counts.map((count) => [count.userId, count]))
   } catch (error) {
     report(error, '관리자 정보를 불러오지 못했습니다.')
   } finally {
@@ -205,6 +221,9 @@ onMounted(load)
             <th>로그인 수단</th>
             <th>권한</th>
             <th>상태</th>
+            <th class="data-table__num">기업</th>
+            <th class="data-table__num">공고</th>
+            <th class="data-table__num">직무</th>
             <th>신청일</th>
             <th class="data-table__actions">처리</th>
           </tr>
@@ -251,6 +270,15 @@ onMounted(load)
                 {{ userStatusLabels[user.status] }}
               </span>
             </td>
+            <td class="data-table__num" :data-zero="countsOf(user.id).companies === 0">
+              {{ countsOf(user.id).companies }}
+            </td>
+            <td class="data-table__num" :data-zero="countsOf(user.id).postings === 0">
+              {{ countsOf(user.id).postings }}
+            </td>
+            <td class="data-table__num" :data-zero="countsOf(user.id).positions === 0">
+              {{ countsOf(user.id).positions }}
+            </td>
             <td class="data-table__date">{{ formatDate(user.createdAt) }}</td>
             <td class="data-table__actions">
               <span v-if="user.id === props.me.id" class="muted-note">
@@ -296,7 +324,7 @@ onMounted(load)
             </td>
           </tr>
           <tr v-if="users.length === 0">
-            <td colspan="7" class="data-table__empty">계정이 없습니다.</td>
+            <td colspan="10" class="data-table__empty">계정이 없습니다.</td>
           </tr>
         </tbody>
       </table>

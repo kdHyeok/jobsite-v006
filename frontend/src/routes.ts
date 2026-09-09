@@ -41,6 +41,7 @@ export const API = {
   resume: (id: string) => `/api/resumes/${id}`,
   resumeCopy: (id: string) => `/api/resumes/${id}/copy`,
   adminUsers: '/api/admin/users',
+  adminUserCounts: '/api/admin/users/counts',
   adminUser: (id: string) => `/api/admin/users/${id}`,
   adminUserStatus: (id: string) => `/api/admin/users/${id}/status`,
   adminUserRole: (id: string) => `/api/admin/users/${id}/role`,
