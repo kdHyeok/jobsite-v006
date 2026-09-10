@@ -13,18 +13,25 @@ app_users ──1:N──▶ resumes
 
 content = {
   basic:        { name, phone, birthDate, email, address, portfolioUrl, githubUrl }
-  educations:   [ { startYm, endYm, school, major, gpa } ]
-  trainings:    [ { name, institution, startYm, endYm, description } ]
+  educations:   [ { startYm, endYm, school, schoolType, major, gpa, totalCredits,
+                    admissionExam, overallRank, diplomaId, transcriptId,
+                    collegeTerms: [ { grade, courses, credits, gpa } ],   // 대학교
+                    schoolTerms:  [ { grade, term, subject, units, achievement, rank, students } ] } ]  // 고등학교
+  trainings:    [ { name, institution, startYm, endYm, description, fileId } ]
   activities:   [ { name, organizer, startYm, endYm, description } ]
   experiences:  [ { company, startYm, endYm, description } ]
   awards:       [ { name, issuer, awardedYm } ]
-  certificates: [ { name, issuer, acquiredYm } ]
+  certificates: [ { name, issuer, acquiredYm, licenseNo, fileId } ]
   skills:       [ { name, level, description } ]
   projects:     [ { name, headcount, startYm, endYm, summary, techStack, role, outcome, description, url } ]
 }
 ```
 
 **섹션마다 테이블을 만들지 않았다.** 이력서는 통째로 읽고 통째로 저장하는 문서이고, 자격증만 SQL 로 뽑을 일이 없다. 9개 테이블은 엔티티·DTO·리포지토리 40개를 뜻한다. 대신 `ResumeContent` Java record 가 모양과 검증(길이 제한)을 들고, 프런트 `types/resume.ts` 의 `SECTIONS` 가 같은 키로 화면을 그린다 — `docs/decisions.md`.
+
+`diplomaId` · `transcriptId` · `fileId` 는 **첨부의 id 문자열**이다. 바이트는 `attachments` 테이블에 있다 — `docs/attachments.md`.
+학력의 `schoolType`(`대학교`/`고등학교`/`기타`)이 화면에서 어떤 학업 이수 표를 보여 줄지 정한다.
+두 표를 한 record 에 함께 둔 이유는 섹션을 쪼개면 학력 순서·정렬이 두 벌이 되기 때문이다.
 
 연월(`startYm` 등)은 **문자열**이다. 사용자는 `2024.03`, `202403`, `현재 교육 중` 처럼 쓴다. 날짜로 파싱하면 그 표현을 잃는다.
 
@@ -89,3 +96,6 @@ cd frontend && npm run type-check && npm test
 - 목록 응답에는 `content` 가 없다(요약). 카드는 이름·수정일만 그린다.
 - **MCP 행 도구는 다른 섹션 필드를 거부한다**(`UNKNOWN_ROW_FIELD`). 합집합 record 로 받기 때문에 스키마상으로는 `school` 을 `certificates` 에 넣을 수 있어 보이지만, 서버가 섹션 record 로 엄격 변환한다. 조용히 버리면 값이 사라진 채 "성공" 이 되기 때문이다.
 - 섹션을 추가하면 `ResumeContent`(record) · `ResumeSection`(enum) · `types/resume.ts`(SECTIONS) · `ResumeRowRequest`(새 필드가 있으면) 네 곳을 함께 고친다.
+- **행 값이 전부 문자열은 아니다.** `kind: 'terms'` 필드만 배열이다. 행에서 값을 꺼낼 때는 `text(row, key)` / `terms(row, key)` 를 쓴다 — 캐스팅을 `types/resume.ts` 한 곳에 모아 둔 이유다.
+- **MCP 행 도구는 중첩 표를 실을 수 없다.** `ResumeRowRequest` 는 평평한 문자열 합집합이다. 그래서 `resume_row_update` 는 요청이 표현하지 못한 배열 필드를 **지우지 않고 남긴다**(`ResumeService.carryArrays`). 이 보호가 없으면 학력 행 하나를 고칠 때마다 성적표가 조용히 사라진다.
+- `when` 이 붙은 필드는 같은 행의 다른 값에 따라 **숨는다**. 숨어도 값은 문서에 남는다 — 학교 구분을 바꿨다가 되돌리면 그대로 돌아온다.

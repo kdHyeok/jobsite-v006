@@ -76,7 +76,9 @@ class ResumeServiceTest {
         saveReturnsArgument();
         ResumeContent content = new ResumeContent(
                 new ResumeContent.BasicInfo("테스트", null, null, null, null, null, "https://example.com/gh"),
-                List.of(new ResumeContent.Education("2020.03", "현재", "테스트 대학교", "컴퓨터공학과", "4.0 / 4.5")),
+                List.of(new ResumeContent.Education("2020.03", "현재", "테스트 대학교", "대학교", "컴퓨터공학과",
+                        "4.0 / 4.5", "133.00", null, null, null, null,
+                        List.of(new ResumeContent.CollegeTerm("1학년", "일반화학(A+)", "24.00", "4.38")), null)),
                 null, null, null, null, null, null, null);
 
         ResumeResponse created = service.create(new ResumeRequest("v1", content));

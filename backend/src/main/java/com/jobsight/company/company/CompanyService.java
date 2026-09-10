@@ -75,6 +75,7 @@ public class CompanyService {
                 request.name().trim(),
                 normalize(request.websiteUrl()),
                 normalizeIndustries(request.industries()),
+                normalizeBusinesses(request.businesses()),
                 request.companySize(),
                 request.annualRevenue(),
                 request.annualRevenue() == null ? null : revenueUnit(request),
@@ -85,6 +86,22 @@ public class CompanyService {
                 normalize(request.benefits()),
                 normalize(request.memo())
         );
+    }
+
+    /** 사업명이 빈 행은 버린다 — 폼에서 빈 줄을 남기고 저장하는 일이 흔하다. 순서는 유지한다. */
+    private static List<com.jobsight.company.company.BusinessArea> normalizeBusinesses(
+            List<com.jobsight.company.company.dto.BusinessAreaRequest> raw) {
+        if (raw == null) {
+            return List.of();
+        }
+        List<com.jobsight.company.company.BusinessArea> areas = new ArrayList<>();
+        for (var area : raw) {
+            String name = normalize(area.name());
+            if (name != null) {
+                areas.add(new com.jobsight.company.company.BusinessArea(name, normalize(area.description())));
+            }
+        }
+        return areas;
     }
 
     /** 빈 값과 중복을 걸러내고 입력 순서를 유지한다. */

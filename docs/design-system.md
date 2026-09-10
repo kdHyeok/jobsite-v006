@@ -46,7 +46,8 @@ monday.com 의 Vibe UI Kit 을 참고했다 — 라이트 서피스, 8px 라운�
    화면을 넘길 때는 `?focus=<id>` 를 붙인다 — 링크로 공유·북마크된다. 라우팅은 `App.vue` 만 한다.
    **역방향(부모로 가기)은 버튼이다.** 부모는 하나뿐이라 행이 아니라 이름 옆 `.link-button` 을 한 번 눌러 간다:
    공고 → 고용회사, 직무 → 소속 공고.
-6. 파괴적 확인만 가운데 모달(`ConfirmDialog`).
+6. 가운데 모달은 둘뿐이다 — 파괴적 확인(`ConfirmDialog`)과 **첨부 미리보기**(`AttachmentField` 의 `.preview-backdrop`).
+   미리보기는 드로어·전체 페이지 어디서 열려도 같아야 하고, 이미지·PDF 를 크게 봐야 해서 예외로 둔다.
 7. **규칙 4 의 유일한 예외 — 이력서 편집기는 전체 페이지다.** 섹션 9개·행마다 필드 최대 10개는 520px 드로어에 들어가지 않는다.
    목록은 카드(`/resumes`), 편집기는 `?focus=<id>` 로 같은 보드가 그린다. 섹션은 `.resume-section`, 행은 `.resume-row`(↑↓× 는 `.repeater__move` 재사용).
    저장 안 한 변경은 `변경됨 · 저장 전` 배지 + 이탈 확인.
@@ -72,7 +73,10 @@ URL과 명령 복사 결과는 aria-live로 제공한다. OAuth 내부 설정과
 | 가로 스트립 | `.strip` | 직무 드로어의 참고 정보 카드 |
 | 기업 자료 앨범 | `.content-grid` | 기업 드로어의 뉴스·유튜브 카드. 작은 화면에서는 한 열 |
 | 폼 | `CompanyForm` `PostingForm` | **바깥 껍데기 없음** — 드로어가 감싼다 |
-| 확인 | `ConfirmDialog.vue` | 유일한 가운데 모달 |
+| 첨부 | `AttachmentField.vue` | 값은 첨부 id 문자열 하나. 첨부·교체·제거·미리보기. 파일 input 은 숨기고 버튼이 연다 |
+| 행 안의 표 | `TermTable.vue` `.term-table` | 학년별·학기별 이수 내역. 열이 많아 **표만** 가로 스크롤한다 |
+| 사업 반복 입력 | `BusinessAreas.vue` `.repeater__row--business` | 기업 주요 사업. 이름 한 줄 + 설명 한 줄 |
+| 확인 | `ConfirmDialog.vue` | 파괴적 확인 모달 |
 
 ## 실행·검증
 
@@ -93,4 +97,6 @@ docker compose up -d --build && bash scripts/smoke.sh
 - 카드에 필드를 추가하고 싶어지면 상세에 넣는다. 규칙 3이 이 화면의 존재 이유다.
 - **드로어는 520px 고정이다.** 폼 한 줄에 넣을 수 있는 건 대략 컨트롤 3개까지다. `datetime-local` 은 한국어 형식(`2026. 09. 10. 오후 06:00`)이라 200px 아래로 내려가면 연도만 남고 잘린다 — 좁아지면 숨기지 말고 줄을 나눈다(`.repeater__when`).
 - **`.mini-row` 는 `<div>` 가 아니라 `<button>` 이다.** `<div>` 로 되돌리면 더블클릭이 글자만 선택하고 키보드로는 아예 열 수 없다.
+- **이력서 행의 필드는 종류가 늘었다** — `file`·`select`·`terms`. 새 종류를 더하면 `ResumeSection.vue` 의 분기와 `types/resume.ts` 의 `FieldKind`·`MAX_LENGTH` 를 함께 고친다.
+- 학력 행은 `schoolType` 에 따라 필드가 **숨는다**(`when`). 숨은 필드의 값은 지워지지 않는다.
 - 라이트 테마 하나뿐이다. 다크 토글은 없다 — 요구된 적이 없다.

@@ -67,6 +67,17 @@ const tab = ref<'profile' | 'content'>('profile')
     </section>
 
     <section class="detail-section">
+      <p class="label">주요 사업 · {{ company.businesses.length }}건</p>
+      <p v-if="company.businesses.length === 0" class="body-copy empty">아직 등록한 주요 사업이 없습니다.</p>
+      <ul v-else class="business-list">
+        <li v-for="(area, index) in company.businesses" :key="index">
+          <strong>{{ area.name }}</strong>
+          <span v-if="area.description">{{ area.description }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="detail-section">
       <p class="label">기업 복지</p>
       <p class="body-copy" :class="{ empty: !company.benefits }">
         {{ company.benefits || '아직 입력된 기업 복지가 없습니다.' }}

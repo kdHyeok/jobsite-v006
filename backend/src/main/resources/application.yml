@@ -16,6 +16,11 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      # 첨부 상한. AttachmentService.MAX_BYTES · nginx client_max_body_size 와 함께 움직인다.
+      max-file-size: 10MB
+      max-request-size: 12MB
 
 server:
   # nginx 가 넘겨주는 X-Forwarded-Proto 를 신뢰한다(HTTPS 뒤에서 secure 판정용).

@@ -26,6 +26,9 @@ public record CompanyRequest(
         @Size(max = 10, message = "업종은 10개 이하로 입력해 주세요.")
         List<@Size(max = 60, message = "업종은 60자 이하여야 합니다.") String> industries,
 
+        @Size(max = 20, message = "주요 사업은 20개 이하로 입력해 주세요.")
+        List<@jakarta.validation.Valid BusinessAreaRequest> businesses,
+
         CompanySize companySize,
 
         @PositiveOrZero(message = "매출액은 0 이상이어야 합니다.")

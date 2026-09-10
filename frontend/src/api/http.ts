@@ -32,7 +32,9 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { ...(init?.headers as Record<string, string>) }
 
   // URLSearchParams 본문은 fetch가 알아서 form-urlencoded 헤더를 붙인다.
-  if (init?.body && !(init.body instanceof URLSearchParams) && !headers['Content-Type']) {
+  // FormData 도 마찬가지다 — 여기서 Content-Type 을 넣으면 boundary 가 빠져 서버가 파트를 못 읽는다.
+  const selfTyped = init?.body instanceof URLSearchParams || init?.body instanceof FormData
+  if (init?.body && !selfTyped && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json'
   }
   if (!SAFE_METHODS.includes(method)) {

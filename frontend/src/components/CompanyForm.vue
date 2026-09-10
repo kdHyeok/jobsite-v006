@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
-import type { Company, CompanyPayload, CompanySize, RevenueUnit } from '../types/company'
+import type { BusinessArea, Company, CompanyPayload, CompanySize, RevenueUnit } from '../types/company'
 import { companySizeLabels } from '../types/company'
+import BusinessAreas from './BusinessAreas.vue'
 import TagInput from './TagInput.vue'
 
 const props = defineProps<{
@@ -23,7 +24,7 @@ type FormState = Omit<CompanyPayload, 'annualRevenue' | 'employeeCount' | 'reven
 }
 
 const emptyForm = (): FormState => ({
-  name: '', websiteUrl: '', industries: [], companySize: null,
+  name: '', websiteUrl: '', industries: [], businesses: [], companySize: null,
   revenueUnit: 'TEN_THOUSAND',
   annualRevenueText: '', employeeCountText: '', address: '',
   foundedOn: '', summary: '', benefits: '', memo: '',
@@ -43,6 +44,7 @@ watch(
           name: company.name,
           websiteUrl: company.websiteUrl ?? '',
           industries: [...company.industries],
+          businesses: company.businesses.map((area) => ({ ...area })),
           companySize: company.companySize,
           revenueUnit: revenueUnitOf(company),
           annualRevenueText: company.annualRevenue === null ? '' : String(company.annualRevenue / revenueDivisor(revenueUnitOf(company))),
@@ -94,6 +96,7 @@ function submit() {
     name: form.name.trim(),
     websiteUrl: form.websiteUrl.trim(),
     industries: form.industries,
+    businesses: form.businesses,
     companySize: form.companySize,
     annualRevenue,
     revenueUnit: annualRevenue === null ? null : form.revenueUnit,
@@ -166,6 +169,8 @@ const revenueUnits: Array<[RevenueUnit, string]> = [['TEN_THOUSAND', '만 원'],
         <input v-model="form.address" maxlength="200" placeholder="예: 경기 성남시 분당구 …" />
         <small v-if="fieldError('address')" class="field-error">{{ fieldError('address') }}</small>
       </label>
+
+      <BusinessAreas :areas="form.businesses" @update:areas="form.businesses = $event as BusinessArea[]" />
 
       <label class="field full">
         <span>기업 복지</span>

@@ -3,12 +3,20 @@ import type { JobPosting } from './posting'
 export type CompanySize = 'STARTUP' | 'SMALL' | 'MEDIUM' | 'LARGE' | 'PUBLIC'
 export type RevenueUnit = 'TEN_THOUSAND' | 'HUNDRED_MILLION'
 
+/** 기업의 주요 사업 한 건. 입력 순서를 유지한다. */
+export interface BusinessArea {
+  name: string
+  description: string | null
+}
+
 export interface Company {
   id: string
   name: string
   websiteUrl: string | null
   /** 업종 다중값. 입력 순서를 유지한다. */
   industries: string[]
+  /** 주요 사업. 업종과 달리 설명이 붙는다. */
+  businesses: BusinessArea[]
   companySize: CompanySize | null
   /** 원 단위. 표기는 formatRevenue 가 만든다. */
   annualRevenue: number | null
@@ -30,6 +38,7 @@ export interface CompanyPayload {
   name: string
   websiteUrl: string
   industries: string[]
+  businesses: BusinessArea[]
   companySize: CompanySize | null
   annualRevenue: number | null
   revenueUnit: RevenueUnit | null

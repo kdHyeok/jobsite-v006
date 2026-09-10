@@ -90,6 +90,7 @@ check "GET /api/companies/{id}/contents"    "401"  "$(code "$BASE/api/companies/
 check "GET /api/postings"                   "401"  "$(code "$BASE/api/postings")"
 check "GET /api/positions"                  "401"  "$(code "$BASE/api/positions")"
 check "GET /api/resumes"                    "401"  "$(code "$BASE/api/resumes")"
+check "GET /api/attachments/x"              "401"  "$(code "$BASE/api/attachments/x")"
 check "GET /api/references"                 "401"  "$(code "$BASE/api/references")"
 check "GET /api/admin/users"                "401"  "$(code "$BASE/api/admin/users")"
 check "GET /api/admin/users/counts"         "401"  "$(code "$BASE/api/admin/users/counts")"

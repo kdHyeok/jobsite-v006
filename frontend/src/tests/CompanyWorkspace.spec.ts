@@ -50,6 +50,7 @@ const company: Company = {
   name: '루멘 로보틱스 데모',
   websiteUrl: null,
   industries: ['로봇'],
+  businesses: [{ name: '자율주행 물류로봇', description: '매출의 60%' }],
   companySize: 'MEDIUM',
   annualRevenue: 120_000_000_000,
   revenueUnit: 'HUNDRED_MILLION',

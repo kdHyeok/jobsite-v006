@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import type { Row, SectionConfig } from '../types/resume'
-import { MAX_LENGTH, emptyRow } from '../types/resume'
+import AttachmentField from './AttachmentField.vue'
+import TermTable from './TermTable.vue'
+import type { Row, RowValue, SectionConfig, TermRow } from '../types/resume'
+import { MAX_LENGTH, emptyRow, text, terms, visible } from '../types/resume'
 
 /**
  * 섹션 하나 = 행 카드들 + 행 추가. 행은 불변으로 갈아끼운다(부모의 변경 감지가 깊은 비교라서).
@@ -23,9 +25,11 @@ function move(index: number, delta: number) {
   next.splice(target, 0, row)
   emit('update:rows', next)
 }
-function set(index: number, key: string, value: string) {
+function set(index: number, key: string, value: RowValue) {
   emit('update:rows', props.rows.map((row, i) => (i === index ? { ...row, [key]: value } : row)))
 }
+
+const setTerms = (index: number, key: string, rows: TermRow[]) => set(index, key, rows)
 </script>
 
 <template>
@@ -47,28 +51,49 @@ function set(index: number, key: string, value: string) {
         </span>
       </div>
       <div class="form-grid">
-        <label
-          v-for="field in section.fields"
-          :key="field.key"
-          class="field"
-          :class="{ full: field.kind === 'textarea' || field.kind === 'url' }"
-        >
-          <span>{{ field.label }}</span>
-          <textarea
-            v-if="field.kind === 'textarea'"
-            :value="row[field.key] ?? ''"
-            :maxlength="MAX_LENGTH.textarea"
-            rows="3"
-            @input="set(index, field.key, ($event.target as HTMLTextAreaElement).value)"
-          />
-          <input
-            v-else
-            :value="row[field.key] ?? ''"
-            :maxlength="MAX_LENGTH[field.kind]"
-            :placeholder="field.placeholder"
-            @input="set(index, field.key, ($event.target as HTMLInputElement).value)"
-          />
-        </label>
+        <!-- 학교 구분에 따라 대학교/고등학교 항목이 갈린다(visible). -->
+        <template v-for="field in section.fields" :key="field.key">
+          <template v-if="visible(field, row)">
+            <TermTable
+              v-if="field.kind === 'terms'"
+              :label="field.label"
+              :columns="field.columns ?? []"
+              :rows="terms(row, field.key)"
+              @update:rows="setTerms(index, field.key, $event)"
+            />
+            <AttachmentField
+              v-else-if="field.kind === 'file'"
+              :id="text(row, field.key)"
+              :label="field.label"
+              @update:id="set(index, field.key, $event)"
+            />
+            <label v-else class="field" :class="{ full: field.kind === 'textarea' || field.kind === 'url' }">
+              <span>{{ field.label }}</span>
+              <select
+                v-if="field.kind === 'select'"
+                :value="text(row, field.key)"
+                @change="set(index, field.key, ($event.target as HTMLSelectElement).value)"
+              >
+                <option value="">선택 안 함</option>
+                <option v-for="option in field.options ?? []" :key="option" :value="option">{{ option }}</option>
+              </select>
+              <textarea
+                v-else-if="field.kind === 'textarea'"
+                :value="text(row, field.key)"
+                :maxlength="MAX_LENGTH.textarea"
+                rows="3"
+                @input="set(index, field.key, ($event.target as HTMLTextAreaElement).value)"
+              />
+              <input
+                v-else
+                :value="text(row, field.key)"
+                :maxlength="MAX_LENGTH[field.kind]"
+                :placeholder="field.placeholder"
+                @input="set(index, field.key, ($event.target as HTMLInputElement).value)"
+              />
+            </label>
+          </template>
+        </template>
       </div>
     </article>
   </section>

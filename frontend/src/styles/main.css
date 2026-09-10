@@ -366,3 +366,37 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .resume-row { margin-top: 10px; padding: 12px; background: var(--surface-sunken); border-radius: var(--radius); }
 .resume-row__bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .resume-row .field input, .resume-row .field textarea { background: var(--surface); }
+
+/* ── 기업 주요 사업 ─────────────────────────────────────────────── */
+.repeater__row--business { grid-template-columns: 24px minmax(0, 1fr) auto; row-gap: 6px; }
+.repeater__note { grid-column: 2 / -1; min-width: 0; }
+.business-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.business-list li { display: grid; gap: 2px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.business-list span { color: var(--muted); font-size: 13px; white-space: pre-wrap; }
+
+/* ── 첨부 ───────────────────────────────────────────────────────── */
+/* 파일 입력은 숨기고 버튼이 대신 연다. 접근성을 위해 aria-label 을 단 진짜 input 이다. */
+.attachment__picker { display: none; }
+.attachment__bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.attachment__name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attachment__name small { color: var(--muted); margin-left: 6px; }
+.attachment__actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.preview-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 24px; background: rgba(0, 0, 0, .45); }
+.preview-panel { display: flex; flex-direction: column; gap: 12px; width: min(900px, 100%); max-height: 90vh; padding: 16px; border-radius: var(--radius); background: var(--surface); }
+.preview-panel__head { display: flex; align-items: center; gap: 12px; }
+.preview-panel img { max-width: 100%; max-height: 76vh; object-fit: contain; }
+.preview-panel iframe { width: 100%; height: 76vh; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
+
+/* ── 행 안의 표 (학년별·학기별 이수) ─────────────────────────────── */
+.term-table__head { display: flex; align-items: center; gap: 8px; }
+.term-table__head .button { margin-left: auto; }
+/* 열이 7개까지 간다. 페이지가 아니라 이 표만 가로로 스크롤한다. */
+.term-table__scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.term-table__scroll table { width: 100%; border-collapse: collapse; }
+.term-table__scroll th { padding: 8px 10px; text-align: left; color: var(--muted); font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.term-table__scroll td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.term-table__scroll tr:last-child td { border-bottom: 0; }
+.term-table__scroll input, .term-table__scroll textarea { width: 100%; min-width: 72px; }
+.term-table__wide { min-width: 260px; }
+.term-table__seq { width: 32px; color: var(--muted); font-size: 12px; }
+.term-table__tools { width: 96px; }

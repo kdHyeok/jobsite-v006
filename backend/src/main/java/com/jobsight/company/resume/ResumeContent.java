@@ -34,7 +34,8 @@ public record ResumeContent(
     public ResumeContent normalized() {
         return new ResumeContent(
                 basic == null ? BasicInfo.empty() : basic,
-                orEmpty(educations), orEmpty(trainings), orEmpty(activities), orEmpty(experiences),
+                orEmpty(educations).stream().map(Education::normalized).toList(),
+                orEmpty(trainings), orEmpty(activities), orEmpty(experiences),
                 orEmpty(awards), orEmpty(certificates), orEmpty(skills), orEmpty(projects));
     }
 
@@ -56,12 +57,54 @@ public record ResumeContent(
         }
     }
 
+    /**
+     * 학력 한 줄. 대학교와 고등학교는 적는 것이 다르다 — 화면이 schoolType 으로 갈라 보여 주고,
+     * 저장은 한 record 에 둘 다 담는다. 섹션을 둘로 쪼개면 학력 순서·정렬이 두 벌이 된다.
+     * diplomaId·transcriptId 는 attachments 의 id 문자열이다 — docs/attachments.md.
+     */
     public record Education(
             @Size(max = SHORT) String startYm,
             @Size(max = SHORT) String endYm,
             @Size(max = SHORT) String school,
+            @Size(max = SHORT) String schoolType,
             @Size(max = SHORT) String major,
+            @Size(max = SHORT) String gpa,
+            @Size(max = SHORT) String totalCredits,
+            @Size(max = SHORT) String admissionExam,
+            @Size(max = SHORT) String overallRank,
+            @Size(max = SHORT) String diplomaId,
+            @Size(max = SHORT) String transcriptId,
+            @Size(max = 20, message = "학년별 이수 내역은 20개 이하여야 합니다.")
+            List<@Valid CollegeTerm> collegeTerms,
+            @Size(max = 300, message = "학기별 이수 과목은 300개 이하여야 합니다.")
+            List<@Valid SchoolTerm> schoolTerms
+    ) {
+        /** 중첩 표도 null 이 아니라 [] 로. 읽는 쪽이 null 검사를 안 하게 한다. */
+        Education normalized() {
+            return new Education(startYm, endYm, school, schoolType, major, gpa, totalCredits,
+                    admissionExam, overallRank, diplomaId, transcriptId,
+                    orEmpty(collegeTerms), orEmpty(schoolTerms));
+        }
+    }
+
+    /** 대학교: 학년 하나에 이수 과목 목록과 그 학년의 학점. */
+    public record CollegeTerm(
+            @Size(max = SHORT) String grade,
+            @Size(max = LONG) String courses,
+            @Size(max = SHORT) String credits,
             @Size(max = SHORT) String gpa
+    ) {
+    }
+
+    /** 고등학교: 생활기록부 그대로 학기·과목 단위. */
+    public record SchoolTerm(
+            @Size(max = SHORT) String grade,
+            @Size(max = SHORT) String term,
+            @Size(max = SHORT) String subject,
+            @Size(max = SHORT) String units,
+            @Size(max = SHORT) String achievement,
+            @Size(max = SHORT) String rank,
+            @Size(max = SHORT) String students
     ) {
     }
 
@@ -70,7 +113,9 @@ public record ResumeContent(
             @Size(max = SHORT) String institution,
             @Size(max = SHORT) String startYm,
             @Size(max = SHORT) String endYm,
-            @Size(max = LONG) String description
+            @Size(max = LONG) String description,
+            /** 이수증. attachments 의 id 문자열. */
+            @Size(max = SHORT) String fileId
     ) {
     }
 
@@ -101,7 +146,10 @@ public record ResumeContent(
     public record Certificate(
             @Size(max = SHORT) String name,
             @Size(max = SHORT) String issuer,
-            @Size(max = SHORT) String acquiredYm
+            @Size(max = SHORT) String acquiredYm,
+            @Size(max = SHORT) String licenseNo,
+            /** 자격증 사본. attachments 의 id 문자열. */
+            @Size(max = SHORT) String fileId
     ) {
     }
 

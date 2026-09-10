@@ -107,7 +107,7 @@ public class ResumeService {
     public ResumeResponse updateRow(UUID id, ResumeSection section, int index, ResumeRowRequest row) {
         return mutateRows(id, section, rows -> {
             requireIndex(rows, index);
-            rows.set(index, toNode(section, row));
+            rows.set(index, carryArrays(rows.get(index), toNode(section, row)));
         });
     }
 
@@ -118,6 +118,24 @@ public class ResumeService {
             requireIndex(rows, index);
             rows.remove(index);
         });
+    }
+
+    /**
+     * 행 요청이 표현하지 못하는 중첩 배열(학년별·학기별 이수 내역)은 기존 값을 지킨다.
+     * ResumeRowRequest 는 평평한 문자열 합집합이라 그 표를 실을 수 없다 —
+     * 그대로 두면 학력 행 하나를 고칠 때마다 성적표가 조용히 사라진다.
+     */
+    private static JsonNode carryArrays(JsonNode previous, JsonNode replacement) {
+        if (!(previous instanceof ObjectNode before) || !(replacement instanceof ObjectNode next)) {
+            return replacement;
+        }
+        before.properties().forEach(entry -> {
+            JsonNode carried = next.get(entry.getKey());
+            if (entry.getValue().isArray() && (carried == null || carried.isNull())) {
+                next.set(entry.getKey(), entry.getValue());
+            }
+        });
+        return next;
     }
 
     private ResumeResponse mutateRows(UUID id, ResumeSection section, Consumer<ArrayNode> change) {

@@ -11,6 +11,7 @@ public record CompanyAttributes(
         String name,
         String websiteUrl,
         List<String> industries,
+        List<BusinessArea> businesses,
         CompanySize companySize,
         Long annualRevenue,
         RevenueUnit revenueUnit,
@@ -23,6 +24,7 @@ public record CompanyAttributes(
 ) {
     /** 공고 폼에서 직접 입력한 회사명으로 만드는 최소 기업. 나머지는 기업 페이지에서 채운다. */
     public static CompanyAttributes nameOnly(String name) {
-        return new CompanyAttributes(name, null, java.util.List.of(), null, null, null, null, null, null, null, null, null);
+        return new CompanyAttributes(name, null, java.util.List.of(), java.util.List.of(),
+                null, null, null, null, null, null, null, null, null);
     }
 }

@@ -9,13 +9,16 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -40,6 +43,12 @@ public class Company {
     @CollectionTable(name = "company_industries", joinColumns = @JoinColumn(name = "company_id"))
     @Column(name = "industry", length = 60, nullable = false)
     private Set<String> industries = new LinkedHashSet<>();
+
+    /** 주요 사업 다중값. 업종과 달리 설명이 붙고 순서가 의미를 가진다. */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "company_businesses", joinColumns = @JoinColumn(name = "company_id"))
+    @OrderColumn(name = "seq")
+    private List<BusinessArea> businesses = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "company_size", length = 20)
@@ -97,6 +106,7 @@ public class Company {
         this.name = attributes.name();
         this.websiteUrl = attributes.websiteUrl();
         this.industries = new LinkedHashSet<>(attributes.industries());
+        this.businesses = new ArrayList<>(attributes.businesses());
         this.companySize = attributes.companySize();
         this.annualRevenue = attributes.annualRevenue();
         this.revenueUnit = attributes.annualRevenue() == null ? null : attributes.revenueUnit();
@@ -140,6 +150,7 @@ public class Company {
     public String getName() { return name; }
     public String getWebsiteUrl() { return websiteUrl; }
     public Set<String> getIndustries() { return industries; }
+    public List<BusinessArea> getBusinesses() { return businesses; }
     public CompanySize getCompanySize() { return companySize; }
     public Long getAnnualRevenue() { return annualRevenue; }
     public RevenueUnit getRevenueUnit() { return revenueUnit; }
