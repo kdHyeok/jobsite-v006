@@ -1,14 +1,19 @@
 package com.jobsight.company.selfintro;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.JoinColumn;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "self_introductions")
@@ -19,8 +24,11 @@ public class SelfIntroduction {
     @Column(name = "owner_id", nullable = false, updatable = false)
     private UUID ownerId;
 
+    @ElementCollection
+    @CollectionTable(name = "self_introduction_resumes",
+            joinColumns = @JoinColumn(name = "self_introduction_id"))
     @Column(name = "resume_id", nullable = false)
-    private UUID resumeId;
+    private Set<UUID> resumeIds = new LinkedHashSet<>();
 
     @Column(nullable = false, length = 1000)
     private String question;
@@ -37,14 +45,15 @@ public class SelfIntroduction {
     protected SelfIntroduction() {
     }
 
-    public SelfIntroduction(UUID ownerId, UUID resumeId, String question, String answer) {
+    public SelfIntroduction(UUID ownerId, Set<UUID> resumeIds, String question, String answer) {
         this.id = UUID.randomUUID();
         this.ownerId = ownerId;
-        update(resumeId, question, answer);
+        update(resumeIds, question, answer);
     }
 
-    public void update(UUID resumeId, String question, String answer) {
-        this.resumeId = resumeId;
+    public void update(Set<UUID> resumeIds, String question, String answer) {
+        this.resumeIds.clear();
+        this.resumeIds.addAll(resumeIds);
         this.question = question;
         this.answer = answer;
         this.updatedAt = Instant.now();
@@ -65,7 +74,7 @@ public class SelfIntroduction {
 
     public UUID getId() { return id; }
     public UUID getOwnerId() { return ownerId; }
-    public UUID getResumeId() { return resumeId; }
+    public Set<UUID> getResumeIds() { return Set.copyOf(resumeIds); }
     public String getQuestion() { return question; }
     public String getAnswer() { return answer; }
     public Instant getCreatedAt() { return createdAt; }

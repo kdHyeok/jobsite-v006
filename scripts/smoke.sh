@@ -76,6 +76,7 @@ for field in "\"issuer\":\"$BASE\"" "\"authorization_endpoint\":\"$BASE/oauth2/a
   esac
 done
 check "OAuth PKCE S256 advertised" "S256" "$(printf '%s' "$oauth_metadata" | grep -o '"code_challenge_methods_supported":\[[^]]*\]' | grep -o 'S256')"
+check "OAuth refresh_token advertised" "refresh_token" "$(printf '%s' "$oauth_metadata" | grep -o '"grant_types_supported":\[[^]]*\]' | grep -o 'refresh_token')"
 check "OAuth CIMD discovery" "true" "$(printf '%s' "$oauth_metadata" | grep -o '"client_id_metadata_document_supported":true' | cut -d: -f2)"
 check "GET plugin guide" "200" "$(code "$BASE/plugin")"
 check "GET plugin config" "200" "$(code "$BASE/plugin/config")"

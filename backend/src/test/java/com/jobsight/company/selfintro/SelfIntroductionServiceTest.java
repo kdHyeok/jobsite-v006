@@ -12,11 +12,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.anyList;
 
 @ExtendWith(MockitoExtension.class)
 class SelfIntroductionServiceTest {
@@ -47,21 +49,22 @@ class SelfIntroductionServiceTest {
     void createRequiresOwnedResumeAndNormalizesAnswer() {
         given(currentUser.id()).willReturn(OWNER_ID);
         Resume resume = new Resume(OWNER_ID, "지원용", "{}");
-        given(resumeRepository.findByIdAndOwnerId(RESUME_ID, OWNER_ID)).willReturn(Optional.of(resume));
+        given(resumeRepository.findAllByIdInAndOwnerId(anyList(), org.mockito.ArgumentMatchers.eq(OWNER_ID)))
+                .willReturn(List.of(resume));
         given(repository.save(any())).willAnswer(invocation -> {
             SelfIntroduction value = invocation.getArgument(0);
             value.onCreate();
             return value;
         });
 
-        var created = service.create(new SelfIntroductionRequest(RESUME_ID, "  지원 동기는? ", "  답변  "));
+        var created = service.create(new SelfIntroductionRequest(List.of(RESUME_ID), "  지원 동기는? ", "  답변  "));
 
         assertThat(created.question()).isEqualTo("지원 동기는?");
         assertThat(created.answer()).isEqualTo("답변");
     }
 
     private static SelfIntroduction value(String question, String answer) {
-        SelfIntroduction value = new SelfIntroduction(OWNER_ID, RESUME_ID, question, answer);
+        SelfIntroduction value = new SelfIntroduction(OWNER_ID, Set.of(RESUME_ID), question, answer);
         value.onCreate();
         return value;
     }

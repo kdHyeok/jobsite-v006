@@ -12,7 +12,7 @@ Google 로그인·권한 동의는 사용자가 수행한다. 외부 콘텐츠 �
 
 연결된 `jobsight` MCP 서버의 도구를 사용한다. 클라이언트가 붙이는 도구 이름 접두사는 달라질 수 있다.
 먼저 `account_get`으로 연결 계정을 확인하고 사용 가능한 도구/inputSchema를 읽는다.
-OAuth가 필요하면 클라이언트의 연결 흐름을 사용한다. 비밀번호·Google 토큰·세션 쿠키를 요청하거나 복사하지 않는다.
+OAuth가 필요하면 클라이언트의 연결 흐름을 사용한다. access token 갱신도 클라이언트에 맡기며 비밀번호·Google 토큰·세션 쿠키를 요청하거나 복사하지 않는다.
 로그인은 Google로 하며 승인 대기/정지 계정은 관리자 처리가 필요하다.
 
 ## 공통 동작
@@ -136,7 +136,7 @@ experiences(경력) · awards(수상) · certificates(자격증) · skills(SW �
 연월(`startYm` `endYm` `awardedYm` `acquiredYm`)은 **사용자가 쓴 그대로의 문자열**이다("2024.03", "현재 교육 중"). 날짜로 바꾸지 않는다.
 
 **내용 편집은 행 도구를 쓴다** — 문서 전체를 되돌려 보내지 않아도 된다. 나머지 섹션은 서버가 그대로 둔다.
-- `resume_basic_update({id,request:{name,phone,birthDate,email,address,portfolioUrl,githubUrl}})`: 기본정보 블록 교체.
+- `resume_basic_update({id,request:{name,phone,birthDate,email,address,portfolioUrl,portfolioFileId,githubUrl}})`: 기본정보 블록 교체.
 - `resume_row_add({id,section,request})`: 섹션 맨 뒤에 행 추가. `request` 에는 **그 섹션의 필드만** 넣는다 —
   다른 섹션 필드가 섞이면 UNKNOWN_ROW_FIELD 로 거부된다(조용히 버려져 값이 사라지는 일을 막기 위해).
 - `resume_row_update({id,section,index,request})`: `index` 는 **0부터**. 그 행 전체를 교체하므로 먼저 `resume_get` 으로 읽고
@@ -148,8 +148,8 @@ experiences(경력) · awards(수상) · certificates(자격증) · skills(SW �
 ## 자기소개 문항
 
 `self_intro_list({q?,resumeId?})`, `self_intro_get({id})`, `self_intro_create({request})`,
-`self_intro_update({id,request})`, `self_intro_delete({id})`를 사용한다. 요청 필드는 `resumeId`, `question`, `answer`다.
-검색어 `q`는 질문과 답변의 같은 단어를 BM25 점수순으로 찾는다. 문항은 반드시 내 이력서 하나에 속한다.
+`self_intro_update({id,request})`, `self_intro_delete({id})`를 사용한다. 요청 필드는 `resumeIds`(1개 이상), `question`, `answer`다. 하나의 문항을 여러 이력서에 연결할 수 있다.
+검색어 `q`는 질문과 답변의 같은 단어를 BM25 점수순으로 찾는다. 문항은 반드시 내 이력서 하나 이상에 속한다.
 
 ## 계정과 관리자
 

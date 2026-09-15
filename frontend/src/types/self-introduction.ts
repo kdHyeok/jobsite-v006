@@ -1,6 +1,6 @@
 export interface SelfIntroduction {
   id: string
-  resumeId: string
+  resumeIds: string[]
   question: string
   answer: string | null
   createdAt: string
@@ -8,7 +8,7 @@ export interface SelfIntroduction {
 }
 
 export interface SelfIntroductionPayload {
-  resumeId: string
+  resumeIds: string[]
   question: string
   answer: string
 }

@@ -14,15 +14,15 @@ app_users ──1:N──▶ resumes
                      └─N:M─ positions via resume_positions
 
 content = {
-  basic:        { name, phone, birthDate, email, address, portfolioUrl, githubUrl }
+  basic:        { name, phone, birthDate, email, address, portfolioUrl, portfolioFileId, githubUrl }
   educations:   [ { startYm, endYm, school, schoolType, major, gpa, totalCredits,
                     admissionExam, overallRank, diplomaId, transcriptId,
                     collegeTerms: [ { grade, courses, credits, gpa } ],   // 대학교
                     schoolTerms:  [ { grade, term, subject, units, achievement, rank, students } ] } ]  // 고등학교
   trainings:    [ { name, institution, startYm, endYm, description, fileId } ]
-  activities:   [ { name, organizer, startYm, endYm, description } ]
+  activities:   [ { name, organizer, startYm, endYm, description, fileId } ]
   experiences:  [ { company, startYm, endYm, description } ]
-  awards:       [ { name, issuer, awardedYm } ]
+  awards:       [ { name, issuer, awardedYm, fileId } ]
   certificates: [ { name, issuer, acquiredYm, licenseNo, fileId } ]
   skills:       [ { name, level, description } ]
   projects:     [ { name, headcount, startYm, endYm, summary, techStack, role, outcome, description, url } ]
@@ -44,7 +44,8 @@ content = {
 3. **REST 저장은 문서 통째 PUT.** REST 에 행 단위 API 는 없다. 화면은 행 추가·삭제·이동을 로컬에서 하고 `저장` 을 눌러야 DB 에 간다(저장 안 한 변경은 `변경됨` 표시 + 이탈 경고). **MCP 만** 행 도구를 갖는다 — 서버가 조회→수정→저장을 한 트랜잭션으로 묶는 편의 계층이지, 두 번째 저장 경로가 아니다.
 4. **빈 값은 항상 같은 모양.** `content` 가 없으면 `ResumeContent.empty()`, 섹션이 `null` 이면 `[]` 로 정규화해 저장한다. 읽는 쪽이 `null` 검사를 안 하게.
 5. **복제는 새 id.** `POST /resumes/{id}/copy` 는 content 를 그대로 든 새 행을 만든다. 원본은 건드리지 않는다.
-6. **연결 직무는 관계로 저장한다.** `positionIds`는 같은 소유자의 직무만 허용하고 이력서 복제에도 복사한다.
+6. **연결 직무는 관계로 저장한다.** `positionIds`는 같은 소유자의 직무만 허용하고 이력서 복제에도 복사한다. 화면은 이름·기업·공고 검색 후 선택한 직무만 칩으로 보인다.
+7. **내보내기는 저장된 문서 기준이다.** Word는 브라우저가 `.doc`을 만들고 PDF는 인쇄 대화상자의 PDF 저장을 사용한다. 선택한 첨부는 원본 바이트를 별도 ZIP으로 묶는다.
 
 ## 진입점
 
@@ -91,6 +92,9 @@ cd frontend && npm run type-check && npm test
 5. 목록 카드에 이름·최근 수정만 보이는가
 6. 편집기에서 여러 모집 직무를 선택해 저장하고 다시 열어도 연결이 유지되는가
 7. 이력서 목록 카드를 더블클릭하면 해당 이력서 편집기가 열리는가
+8. 직무를 검색해 여러 개 연결하고 선택 칩에서 제거할 수 있는가
+9. 기본정보 포트폴리오·대내외활동·수상내역에 파일을 연결할 수 있는가
+10. Word 다운로드와 PDF 인쇄가 열리고 선택한 첨부만 ZIP으로 내려오는가
 
 ## 함정
 

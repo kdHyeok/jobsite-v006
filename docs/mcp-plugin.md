@@ -16,8 +16,8 @@
 - 매 MCP 요청에서 계정 활성 상태·현재 역할을 DB에서 다시 확인한다. 도구는 `jobsight.read`,
   `jobsight.write`, 관리자 작업은 추가로 `jobsight.admin` 및 실제 ADMIN 역할을 요구한다.
 - resource는 `PUBLIC_BASE_URL + /mcp` 하나다. OAuth 토큰은 이 서버에서만 유효하며 Google 토큰을 전달하지 않는다.
-- 초기 구현의 OAuth 승인·토큰은 단일 프로세스 메모리에 보관한다. 재시작 시 재연결이 필요하다.
-  다중 replica 또는 재시작 후 연결 유지가 필요하면 Spring의 JDBC authorization/consent 저장소로 교체한다.
+- OAuth 승인·토큰은 Spring JDBC 저장소로 PostgreSQL에 보관한다. access token은 1시간,
+  회전형 refresh token은 90일이며 서버 재시작 후에도 연결을 유지한다. 계정 정지·삭제 시에는 남은 토큰 기간과 무관하게 MCP 요청을 거부한다.
 - 기업·공고 삭제 cascade, 마지막 직무 삭제 방지, 참고 정보 공유, 소유자 404 규칙은 기존 서비스가 담당한다.
 - 기업·공고·직무의 `memo`는 렌더링된 HTML이 아닌 Markdown 원문으로 조회·저장한다.
 
@@ -75,7 +75,8 @@ docker compose -f compose.yaml -f compose.mcp.yaml up -d --build
    이 두 scope는 401의 `WWW-Authenticate` 힌트와 두 메타데이터가 함께 광고하므로 클라이언트가 알아서 요청한다.
    관리자 기능이 필요하면 `jobsight.admin`도 요청한다. scope만으로 관리자 권한이 생기지 않는다.
 5. `account_get`, 기업 목록부터 확인한다. 쿠키/토큰을 사람이 복사하는 방식으로 연결하지 않는다.
-   토큰은 1시간 유효하며 만료·서버 재시작 후 OAuth로 다시 연결한다. refresh_token은 발급하지 않는다.
+   access token은 1시간 유효하며 클라이언트가 90일 회전형 refresh token으로 자동 갱신한다.
+   90일 동안 갱신하지 않았거나 사용자가 연결을 해제한 뒤에는 OAuth로 다시 연결한다.
 6. 스킬 포함 플러그인 업로드가 가능한 클라이언트에는 아래 ZIP을 등록한다. MCP만 연결한 경우
    스킬은 자동 설치되지 않으므로 `plugins/jobsight/skills/jobsight/SKILL.md`도 해당 클라이언트의 스킬 기능으로 등록한다.
 
@@ -97,6 +98,7 @@ ZIP 루트는 `.codex-plugin/plugin.json`, `.mcp.json`, `skills/jobsight/SKILL.m
 `posting_list`는 자동 보관을 일으켜 쓰기 scope와 readOnlyHint=false를 사용한다.
 뉴스/유튜브·참고 상세 조회는 소유자 필터된 목록에서 ID를 찾는다.
 MCP용 `position_create`는 기존 `PositionService` 트랜잭션에서 공고 소유권을 검증하고 직무를 추가한다.
+이력서는 `resume_list/get/create/update/copy/delete`, 자기소개는 `self_intro_list/get/create/update/delete`로 전체 CRUD를 제공한다.
 이력서 행 도구(`resume_basic_update`, `resume_row_add/update/delete`)는 REST 에 없는 MCP 전용이다. REST 는 문서 통째 PUT 만 있고,
 MCP 는 문서 전체를 되돌려 보내기 어려워 서버가 조회→한 군데 수정→저장을 한 트랜잭션으로 묶는다(`ResumeService.mutateRows`).
 행 입력 `ResumeRowRequest` 는 8개 섹션 필드의 합집합 record 다 — 스키마 생성기가 Map 을 그리지 못하고 섹션별 도구는 24개가 되기 때문.
@@ -126,11 +128,19 @@ MCP 는 문서 전체를 되돌려 보내기 어려워 서버가 조회→한 �
 ### URL 기반 연결·가이드 검증 (0.2.0, 2026-09-07)
 
 - 기존 배포 버전의 ChatGPT 등록 성공은 사용자가 확인했다. 이번 CIMD 변경은 로컬 검증이며 아직 push·재배포하지 않았다.
-- ChatGPT 공개 CIMD 문서를 실제 조회하여 복수 인증 방법의 `none`, authorization_code/refresh_token capability와 고정 callback을 확인했다. 서버는 authorization_code만 발급한다.
+- ChatGPT 공개 CIMD 문서를 실제 조회하여 복수 인증 방법의 `none`, authorization_code/refresh_token capability와 고정 callback을 확인했다.
 - 컨테이너 `compileJava compileTestJava` 및 MCP/서비스/컨트롤러 테스트 32개: 종료코드 0, `BUILD SUCCESSFUL`. CIMD 코드 교환과 동일 SKILL의 initialize/resource/다운로드 제공을 검증했다.
 - 프런트 타입 검사·43개 테스트, 플러그인/스킬 구조 검사 통과. 로컬 Compose 재빌드 후 스모크 35개 PASS.
 - 내장 브라우저에서 공개 가이드, URL 복사, Google 로그인 후 사이트 복귀를 확인했다. 새 CIMD 방식의 실제 ChatGPT OAuth 왕복은 배포 후 확인해야 한다.
 - 위 수동 callback 설정은 정적 클라이언트의 대안으로 유지된다. 새 CIMD 방식에는 개별 callback 환경변수 등록이 필요 없다.
+
+### 이력서·자기소개 CRUD와 OAuth 갱신 검증 (0.3.0, 2026-09-16)
+
+- 플러그인 manifest와 SKILL에 이력서·자기소개 전체 CRUD를 명시했고 공식 플러그인·스킬 구조 검사를 통과했다.
+- 컨테이너 `compileJava compileTestJava test --tests '*Mcp*Test'`: 종료코드 0, `BUILD SUCCESSFUL`, 16개 통과.
+  인가 코드 교환, refresh token 발급·회전, 이전 토큰 재사용 거부, 정지 계정 접근 거부를 검증했다.
+- Compose 재빌드 후 PostgreSQL 마이그레이션이 `now at version v21`, 백엔드 healthy, 스모크 45개 PASS다.
+- 실제 ChatGPT의 자동 갱신과 배포 서버 재시작 전후 연결 유지는 배포 후 확인해야 한다.
 
 ## 함정 — scope는 세 곳에서 광고된다
 

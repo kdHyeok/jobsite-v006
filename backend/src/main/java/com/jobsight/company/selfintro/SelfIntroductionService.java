@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,7 +40,7 @@ public class SelfIntroductionService {
 
     public List<SelfIntroductionResponse> findAll(String query, UUID resumeId) {
         List<SelfIntroduction> values = repository.findAllByOwnerIdOrderByUpdatedAtDesc(currentUser.id()).stream()
-                .filter(value -> resumeId == null || value.getResumeId().equals(resumeId))
+                .filter(value -> resumeId == null || value.getResumeIds().contains(resumeId))
                 .toList();
         return rank(values, query).stream().map(SelfIntroductionResponse::of).toList();
     }
@@ -49,8 +51,8 @@ public class SelfIntroductionService {
 
     @Transactional
     public SelfIntroductionResponse create(SelfIntroductionRequest request) {
-        requireOwnedResume(request.resumeId());
-        SelfIntroduction value = new SelfIntroduction(currentUser.id(), request.resumeId(), request.question().trim(),
+        Set<UUID> resumeIds = requireOwnedResumes(request.resumeIds());
+        SelfIntroduction value = new SelfIntroduction(currentUser.id(), resumeIds, request.question().trim(),
                 normalize(request.answer()));
         return SelfIntroductionResponse.of(repository.save(value));
     }
@@ -58,8 +60,7 @@ public class SelfIntroductionService {
     @Transactional
     public SelfIntroductionResponse update(UUID id, SelfIntroductionRequest request) {
         SelfIntroduction value = findOwned(id);
-        requireOwnedResume(request.resumeId());
-        value.update(request.resumeId(), request.question().trim(), normalize(request.answer()));
+        value.update(requireOwnedResumes(request.resumeIds()), request.question().trim(), normalize(request.answer()));
         return SelfIntroductionResponse.of(repository.save(value));
     }
 
@@ -114,9 +115,13 @@ public class SelfIntroductionService {
                 .orElseThrow(() -> new ResourceNotFoundException(id));
     }
 
-    private void requireOwnedResume(UUID id) {
-        resumeRepository.findByIdAndOwnerId(id, currentUser.id())
-                .orElseThrow(() -> new ResourceNotFoundException(id));
+    private Set<UUID> requireOwnedResumes(List<UUID> ids) {
+        Set<UUID> unique = new LinkedHashSet<>(ids);
+        if (unique.size() != ids.size()
+                || resumeRepository.findAllByIdInAndOwnerId(List.copyOf(unique), currentUser.id()).size() != unique.size()) {
+            throw new ResourceNotFoundException(ids.get(0));
+        }
+        return unique;
     }
 
     private static String normalize(String value) {

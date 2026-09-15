@@ -16,7 +16,7 @@ vi.mock('../api/resumes', () => ({ listResumes: vi.fn() }))
 
 const item = {
   id: '70000000-0000-0000-0000-000000000001',
-  resumeId: '80000000-0000-0000-0000-000000000001',
+  resumeIds: ['80000000-0000-0000-0000-000000000001'],
   question: '협업 경험을 설명해 주세요.',
   answer: '역할을 나누고 진행했습니다.',
   createdAt: '2026-09-16T00:00:00Z',
@@ -27,7 +27,7 @@ describe('자기소개 검색 하이라이트', () => {
   beforeEach(() => {
     vi.mocked(api.listSelfIntroductions).mockReset().mockResolvedValue([item])
     vi.mocked(listResumes).mockReset().mockResolvedValue([{
-      id: item.resumeId,
+      id: item.resumeIds[0],
       name: '백엔드 이력서',
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,

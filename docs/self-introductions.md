@@ -9,16 +9,17 @@
 ## 도메인
 
 ```
-app_users ──1:N──▶ resumes ──1:N──▶ self_introductions
-                           id · owner_id · resume_id · question · answer · created_at · updated_at
+app_users ──1:N──▶ self_introductions ──N:M──▶ resumes
+                  id · owner_id · question · answer · created_at · updated_at
+                                      via self_introduction_resumes
 ```
 
-`resume_id`는 필수다. 질문은 이력서 편집기에서 추가하고 `/introductions`에서 답변 작성과 전체 CRUD를 한다.
+하나의 문항은 같은 계정의 이력서 여러 개에 연결할 수 있다. 질문은 이력서 편집기 맨 아래에서 선택적 답변과 함께 추가하거나 과거 문항 검색으로 연결하고, `/introductions`에서 전체 CRUD를 한다.
 
 ## 불변 조건
 
 1. 모든 조회·수정·삭제는 `owner_id`가 포함된 repository 메서드만 사용한다. 타인 데이터는 404다.
-2. 연결할 이력서도 같은 소유자인지 `findByIdAndOwnerId`로 확인한다.
+2. `resumeIds`는 1개 이상이며 연결할 모든 이력서를 같은 소유자인지 한 번에 확인한다.
 3. 질문은 1,000자 이하 필수, 답변은 10,000자 이하 선택이다.
 4. 검색은 질문과 답변을 Unicode 문자·숫자 단어로 나누고 검색어를 포함한 단어를 서버에서 BM25 유사 점수로 계산한다. 검색어가 없으면 최근 수정순이다.
 5. 강조 표시는 텍스트 조각을 Vue 노드로 나누며 `v-html`을 사용하지 않는다.
@@ -27,7 +28,7 @@ app_users ──1:N──▶ resumes ──1:N──▶ self_introductions
 
 | 무엇 | 어디 |
 |---|---|
-| 스키마 | `V19__resume_positions_and_self_introductions.sql` |
+| 스키마 | `V19__resume_positions_and_self_introductions.sql` · 다중 이력서 연결 `V20__self_introduction_resumes.sql` |
 | 백엔드 | `selfintro/SelfIntroduction*` · `ApiPaths.SELF_INTRODUCTIONS` |
 | 화면 | `SelfIntroductionBoard.vue` (`/introductions`) · `ResumeQuestions.vue`(이력서 안에서 문항 추가) |
 | 검색·강조 | `SelfIntroductionService.rank()` · `utils/highlight.ts` |
@@ -37,13 +38,13 @@ app_users ──1:N──▶ resumes ──1:N──▶ self_introductions
 
 ```bash
 docker compose up -d --build
-docker compose logs backend   # now at version v19
+docker compose logs backend   # now at version v20
 bash scripts/smoke.sh
 cd frontend && npm run type-check && npm test
 ```
 
 로그인 뒤 이력서에서 여러 직무를 선택해 저장한 다음 새로고침해 유지되는지 확인한다. 질문을 추가해 자기소개 화면에서
-답변 작성·수정·삭제하고, 문항 카드 더블클릭으로 편집기가 열리는지, 질문 또는 답변의 단어로 검색했을 때 점수순 결과와 강조 표시가 나오는지 확인한다.
+답변 작성·수정·삭제하고, 여러 이력서를 연결할 수 있는지, 문항 카드 더블클릭으로 편집기가 열리는지, 질문 또는 답변의 단어로 검색했을 때 점수순 결과와 강조 표시가 나오는지 확인한다.
 
 ## 함정
 

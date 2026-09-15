@@ -50,10 +50,11 @@ public record ResumeContent(
             @Size(max = SHORT) String email,
             @Size(max = URL) String address,
             @Size(max = URL) String portfolioUrl,
+            @Size(max = SHORT) String portfolioFileId,
             @Size(max = URL) String githubUrl
     ) {
         public static BasicInfo empty() {
-            return new BasicInfo(null, null, null, null, null, null, null);
+            return new BasicInfo(null, null, null, null, null, null, null, null);
         }
     }
 
@@ -124,7 +125,8 @@ public record ResumeContent(
             @Size(max = SHORT) String organizer,
             @Size(max = SHORT) String startYm,
             @Size(max = SHORT) String endYm,
-            @Size(max = LONG) String description
+            @Size(max = LONG) String description,
+            @Size(max = SHORT) String fileId
     ) {
     }
 
@@ -139,7 +141,8 @@ public record ResumeContent(
     public record Award(
             @Size(max = SHORT) String name,
             @Size(max = SHORT) String issuer,
-            @Size(max = SHORT) String awardedYm
+            @Size(max = SHORT) String awardedYm,
+            @Size(max = SHORT) String fileId
     ) {
     }
 

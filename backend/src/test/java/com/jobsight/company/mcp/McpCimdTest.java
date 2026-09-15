@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.core.*;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.*;
@@ -31,6 +32,10 @@ class McpCimdTest {
         assertThat(client.getClientSettings().isRequireProofKey()).isTrue();
         assertThat(client.getClientSettings().isRequireAuthorizationConsent()).isTrue();
         assertThat(client.getClientAuthenticationMethods()).containsExactly(ClientAuthenticationMethod.NONE);
+        assertThat(client.getAuthorizationGrantTypes()).contains(AuthorizationGrantType.AUTHORIZATION_CODE,
+                AuthorizationGrantType.REFRESH_TOKEN);
+        assertThat(client.getTokenSettings().getRefreshTokenTimeToLive()).isEqualTo(Duration.ofDays(90));
+        assertThat(client.getTokenSettings().isReuseRefreshTokens()).isFalse();
         assertThat(repository.findById(CLIENT)).isSameAs(client);
         assertThat(calls.get()).isEqualTo(1);
         assertThat(repository.findByClientId("manual")).isNotNull();

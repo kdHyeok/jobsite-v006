@@ -50,8 +50,8 @@ final class ChatGptClients implements RegisteredClientRepository {
                     : "none".equals(doc.get("token_endpoint_auth_method"));
             Object grants = doc.getOrDefault("grant_types", List.of("authorization_code"));
             Object responses = doc.getOrDefault("response_types", List.of("code"));
-            // Metadata describes client capabilities, not grants we must issue (refresh remains unsupported).
             if (!publicClient || !(grants instanceof List<?> supportedGrants) || !supportedGrants.contains("authorization_code")
+                    || !supportedGrants.contains("refresh_token")
                     || !(responses instanceof List<?> supportedResponses) || !supportedResponses.contains("code")) return null;
             String prefix = "https://chatgpt.com/oauth/";
             String callback = id.equals(prefix + "client.json") ? "https://chatgpt.com/connector_platform_oauth_redirect"
@@ -59,10 +59,10 @@ final class ChatGptClients implements RegisteredClientRepository {
             if (!List.of(callback).equals(doc.get("redirect_uris"))) return null;
             var client = RegisteredClient.withId(id).clientId(id).clientName("ChatGPT · JobSight")
                     .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
-                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE).redirectUri(callback)
+                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                    .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN).redirectUri(callback)
                     .clientSettings(ClientSettings.builder().requireProofKey(true).requireAuthorizationConsent(true).build())
-                    .tokenSettings(TokenSettings.builder().accessTokenFormat(OAuth2TokenFormat.REFERENCE)
-                            .accessTokenTimeToLive(Duration.ofHours(1)).authorizationCodeTimeToLive(Duration.ofMinutes(2)).build());
+                    .tokenSettings(McpOAuthConfig.tokenSettings());
             McpOAuthConfig.SCOPES.forEach(client::scope);
             var registered = client.build();
             if (cache.size() >= 128) cache.remove(cache.keySet().iterator().next());

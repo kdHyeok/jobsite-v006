@@ -8,16 +8,22 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.oauth2.core.*;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.server.authorization.*;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.client.*;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.*;
@@ -26,11 +32,14 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.security.web.authentication.AuthenticationConverter;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 
 @Configuration
@@ -71,9 +80,9 @@ public class McpOAuthConfig {
                 .clientId("jobsight-plugin").clientName("JobSight plugin")
                 .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                 .clientSettings(ClientSettings.builder().requireProofKey(true).requireAuthorizationConsent(true).build())
-                .tokenSettings(TokenSettings.builder().accessTokenFormat(OAuth2TokenFormat.REFERENCE)
-                        .accessTokenTimeToLive(Duration.ofHours(1)).authorizationCodeTimeToLive(Duration.ofMinutes(2)).build());
+                .tokenSettings(tokenSettings());
         SCOPES.forEach(client::scope);
         for (String redirect : redirects.split(",")) {
             URI uri = URI.create(redirect.trim());
@@ -88,13 +97,26 @@ public class McpOAuthConfig {
     }
 
     @Bean
-    OAuth2AuthorizationService mcpAuthorizations() {
-        // ponytail: single replica; use JDBC authorization/consent stores for restart persistence or scaling.
-        return new InMemoryOAuth2AuthorizationService();
+    OAuth2AuthorizationService mcpAuthorizations(ObjectProvider<JdbcTemplate> jdbc,
+                                                  RegisteredClientRepository clients) {
+        var template = jdbc.getIfAvailable();
+        return template == null ? new InMemoryOAuth2AuthorizationService()
+                : new JdbcOAuth2AuthorizationService(template, clients);
     }
 
     @Bean
-    OAuth2AuthorizationConsentService mcpConsents() { return new InMemoryOAuth2AuthorizationConsentService(); }
+    OAuth2AuthorizationConsentService mcpConsents(ObjectProvider<JdbcTemplate> jdbc,
+                                                   RegisteredClientRepository clients) {
+        var template = jdbc.getIfAvailable();
+        return template == null ? new InMemoryOAuth2AuthorizationConsentService()
+                : new JdbcOAuth2AuthorizationConsentService(template, clients);
+    }
+
+    static TokenSettings tokenSettings() {
+        return TokenSettings.builder().accessTokenFormat(OAuth2TokenFormat.REFERENCE)
+                .accessTokenTimeToLive(Duration.ofHours(1)).refreshTokenTimeToLive(Duration.ofDays(90))
+                .reuseRefreshTokens(false).authorizationCodeTimeToLive(Duration.ofMinutes(2)).build();
+    }
 
     @Bean
     AuthorizationServerSettings mcpAuthorizationSettings() {
@@ -107,20 +129,33 @@ public class McpOAuthConfig {
     OAuth2TokenGenerator<?> mcpTokenGenerator() {
         var access = new OAuth2AccessTokenGenerator();
         access.setAccessTokenCustomizer(context -> context.getClaims().audience(List.of(resource())));
-        return access;
+        var keys = new Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 96);
+        OAuth2TokenGenerator<OAuth2RefreshToken> refresh = context -> {
+            if (!OAuth2TokenType.REFRESH_TOKEN.equals(context.getTokenType())) return null;
+            var issuedAt = Instant.now();
+            return new OAuth2RefreshToken(keys.generateKey(), issuedAt,
+                    issuedAt.plus(context.getRegisteredClient().getTokenSettings().getRefreshTokenTimeToLive()));
+        };
+        return new DelegatingOAuth2TokenGenerator(access, refresh);
     }
 
     @Bean @Order(1)
-    SecurityFilterChain mcpAuthorizationChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain mcpAuthorizationChain(HttpSecurity http, RegisteredClientRepository clients) throws Exception {
         var server = new OAuth2AuthorizationServerConfigurer();
         http.securityMatcher(server.getEndpointsMatcher())
-                .with(server, config -> config.authorizationServerMetadataEndpoint(metadata ->
-                        metadata.authorizationServerMetadataCustomizer(builder -> builder
+                .with(server, config -> {
+                    config.clientAuthentication(auth -> auth
+                            .authenticationConverters(list -> list.add(0, new PublicRefreshConverter()))
+                            .authenticationProviders(list -> list.add(0, new PublicRefreshProvider(clients))));
+                    config.authorizationServerMetadataEndpoint(metadata ->
+                            metadata.authorizationServerMetadataCustomizer(builder -> builder
                                 .claim("client_id_metadata_document_supported", true)
+                                .claim("grant_types_supported", List.of("authorization_code", "refresh_token"))
                                 // Spring 은 scopes_supported 를 기본으로 넣지 않는다.
                                 // 힌트 대신 메타데이터를 읽는 클라이언트도 write 를 볼 수 있어야 한다.
                                 .claim("scopes_supported", SCOPES)
-                                .tokenEndpointAuthenticationMethods(methods -> { methods.clear(); methods.add("none"); }))))
+                                .tokenEndpointAuthenticationMethods(methods -> { methods.clear(); methods.add("none"); })));
+                })
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 .exceptionHandling(errors -> errors.authenticationEntryPoint(
                         (request, response, error) -> response.sendRedirect(ApiPaths.OAUTH_AUTHORIZATION)))
@@ -145,6 +180,37 @@ public class McpOAuthConfig {
                     }
                 }, SecurityContextHolderFilter.class);
         return http.build();
+    }
+
+    private static final class PublicRefreshConverter implements AuthenticationConverter {
+        @Override public Authentication convert(HttpServletRequest request) {
+            String[] grants = request.getParameterValues(OAuth2ParameterNames.GRANT_TYPE);
+            String[] ids = request.getParameterValues(OAuth2ParameterNames.CLIENT_ID);
+            if (grants == null || grants.length != 1 || !"refresh_token".equals(grants[0])
+                    || ids == null || ids.length != 1 || ids[0].isBlank()
+                    || request.getHeader("Authorization") != null
+                    || request.getParameter(OAuth2ParameterNames.CLIENT_SECRET) != null) return null;
+            return new OAuth2ClientAuthenticationToken(ids[0], ClientAuthenticationMethod.NONE, null,
+                    Map.of(OAuth2ParameterNames.GRANT_TYPE, grants[0]));
+        }
+    }
+
+    private static final class PublicRefreshProvider implements AuthenticationProvider {
+        private final RegisteredClientRepository clients;
+        private PublicRefreshProvider(RegisteredClientRepository clients) { this.clients = clients; }
+        @Override public Authentication authenticate(Authentication authentication) {
+            var token = (OAuth2ClientAuthenticationToken) authentication;
+            if (!ClientAuthenticationMethod.NONE.equals(token.getClientAuthenticationMethod())
+                    || !"refresh_token".equals(token.getAdditionalParameters().get(OAuth2ParameterNames.GRANT_TYPE))) return null;
+            var client = clients.findByClientId(token.getPrincipal().toString());
+            if (client == null || !client.getClientAuthenticationMethods().contains(ClientAuthenticationMethod.NONE)
+                    || !client.getAuthorizationGrantTypes().contains(AuthorizationGrantType.REFRESH_TOKEN))
+                throw new OAuth2AuthenticationException(OAuth2ErrorCodes.INVALID_CLIENT);
+            return new OAuth2ClientAuthenticationToken(client, ClientAuthenticationMethod.NONE, null);
+        }
+        @Override public boolean supports(Class<?> authentication) {
+            return OAuth2ClientAuthenticationToken.class.isAssignableFrom(authentication);
+        }
     }
 
     @Bean @Order(2)

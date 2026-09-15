@@ -52,6 +52,9 @@ class McpToolsTest {
 
     @Test void catalogScopesAndAdministratorRoleAreEnforced() {
         assertThat(tools.list(principal)).hasSize(46);
+        assertThat(tools.list(principal)).extracting(tool -> tool.get("name")).contains(
+                "resume_list", "resume_get", "resume_create", "resume_update", "resume_copy", "resume_delete",
+                "self_intro_list", "self_intro_get", "self_intro_create", "self_intro_update", "self_intro_delete");
         assertThat(tools.list(new McpPrincipal(principal.userId(), Set.of(McpOAuthConfig.READ))))
                 .allSatisfy(tool -> assertThat(((Map<?, ?>) tool.get("annotations")).get("readOnlyHint")).isEqualTo(true));
         assertThatThrownBy(() -> tools.call("admin_users_list", Map.of(), principal))

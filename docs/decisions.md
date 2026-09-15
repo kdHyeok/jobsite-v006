@@ -9,7 +9,7 @@
 사용자 요청으로 외부 ChatGPT/Codex 클라이언트가 서비스를 조작하도록 OAuth 위임을 추가했다.
 사람의 로그인은 계속 Google만 사용하고, MCP에는 별도 audience·scope를 가진 짧은 opaque token을 발급한다.
 기존의 강제 홈 이동은 OAuth 승인 요청으로 복귀할 수 있도록 저장 요청이 있을 때만 복귀하도록 변경했다.
-초기 단일 서버에서는 승인·토큰 저장을 메모리로 하여 재시작 시 재연결한다. 상세 한계는 mcp-plugin.md에 명시했다.
+초기 단일 서버에서는 승인·토큰 저장을 메모리로 시작했으나, 아래 V21 결정으로 PostgreSQL 저장으로 교체했다.
 
 되돌리고 싶은 결정이 있으면 먼저 여기서 이유를 읽는다. 되돌리면 그 이유도 여기에 적는다.
 
@@ -17,13 +17,19 @@
 Strict 는 accounts.google.com 에서 돌아오는 콜백에 세션 쿠키를 싣지 않아 `authorization_request_not_found` 가 난다. 실제로 겪었다. Lax 는 cross-site POST/fetch 를 여전히 막고, CSRF 의 주축은 `XSRF-TOKEN` 토큰이다.
 
 ## 로그인 연장은 Google 토큰이 아니라 회전형 앱 토큰 (V17)
-`JSESSIONID` 만 30일로 늘리면 탈취된 세션도 같은 기간 유효해진다. 브라우저 세션은 30분 유휴 만료로 두고, 원문을 HttpOnly 쿠키에만 두는 JobSight 리프레시 토큰으로 새 세션을 발급한다. DB에는 SHA-256 해시만 저장하며 매 사용 시 회전하되 최초 발급 30일의 절대 만료는 늘리지 않는다. Google access/refresh token과 MCP OAuth 토큰은 저장하거나 재사용하지 않는다.
+`JSESSIONID` 만 30일로 늘리면 탈취된 세션도 같은 기간 유효해진다. 브라우저 세션은 30분 유휴 만료로 두고, 원문을 HttpOnly 쿠키에만 두는 JobSight 리프레시 토큰으로 새 세션을 발급한다. DB에는 SHA-256 해시만 저장하며 매 사용 시 회전하되 최초 발급 30일의 절대 만료는 늘리지 않는다. Google access/refresh token은 저장하거나 재사용하지 않는다. MCP OAuth 토큰은 아래 V21의 별도 위임 수명주기를 따른다.
+
+## MCP OAuth 상태는 PostgreSQL에 저장하고 refresh token은 90일 회전 (V21)
+MCP access token은 노출 피해를 줄이기 위해 1시간으로 유지하고, 클라이언트가 90일 유효한 refresh token으로 갱신한다. refresh token은 사용할 때마다 교체하며 authorization·consent를 PostgreSQL에 저장해 서버 재시작 뒤에도 연결을 유지한다. 계정 상태는 모든 MCP 요청에서 다시 조회하므로 정지·삭제된 계정은 토큰 만료 전에도 접근할 수 없다.
 
 ## 메모 Markdown은 HTML 변환 문자열을 저장하지 않는다 (V18)
 기업·공고·직무 메모는 사용자가 고칠 수 있는 Markdown 원문만 저장한다. 프런트는 요청된 제목·목록·들여쓰기·http(s) 링크만 Vue 노드로 렌더링하고 사용자 HTML은 해석하지 않는다. DB에 HTML을 저장하거나 `v-html`을 쓰지 않아 XSS 정화 라이브러리와 이중 정본을 만들지 않는다.
 
 ## 이력서 직무 연결은 관계, 자기소개는 별도 행 (V19)
 이력서 본문 JSON에 직무·질문 ID를 섞지 않는다. 직무는 FK가 있는 `resume_positions`, 질문·답변은 이력서 FK가 있는 `self_introductions`로 저장해 삭제 정리와 소유권 검증을 DB·서비스가 맡는다. 검색 규모가 작은 동안 PostgreSQL 전문 검색이나 별도 검색 서버 대신 서버 메모리에서 BM25를 계산하고, 데이터 규모가 병목으로 확인될 때 검색 인덱스로 교체한다.
+
+## 자기소개 문항은 여러 이력서에 연결 (V20)
+같은 질문·답변을 지원서 버전마다 복제하면 검색 결과와 수정본이 갈라진다. 문항 본문은 한 행으로 유지하고 `self_introduction_resumes` 관계로 여러 이력서에 연결한다. 기존 `resume_id` 값은 마이그레이션에서 관계 행으로 옮긴 뒤 제거한다.
 
 ## CSRF 핸들러는 평문 `CsrfTokenRequestAttributeHandler`
 Spring Security 6+ 기본 Xor 핸들러는 마스킹 토큰을 기대해 쿠키 원본 토큰을 거부한다(모든 POST 가 403). 토큰이 응답 본문에 실리지 않으므로 BREACH 위험은 해당 없다.

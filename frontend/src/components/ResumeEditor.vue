@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { Position } from '../types/position'
+import AttachmentField from './AttachmentField.vue'
 import ResumeSection from './ResumeSection.vue'
 import ResumeQuestions from './ResumeQuestions.vue'
 import type { Resume, ResumeContent, ResumePayload, Row, SectionKey } from '../types/resume'
-import { BASIC_FIELDS, MAX_LENGTH, SECTIONS, fillContent } from '../types/resume'
+import { BASIC_FIELDS, MAX_LENGTH, SECTIONS, fillContent, text } from '../types/resume'
+import { downloadAttachments, downloadWord } from '../utils/resume-export'
 
 /**
  * 이력서 한 버전의 전체 페이지 편집기. 폼이 커서 드로어(520px)에 넣지 않는다 — design-system 규칙 7.
@@ -28,6 +30,10 @@ const emit = defineEmits<{
 const name = ref(props.resume.name)
 const content = ref<ResumeContent>(fillContent(props.resume.content))
 const positionIds = ref<string[]>([...props.resume.positionIds])
+const positionQuery = ref('')
+const exportOpen = ref(false)
+const attachmentIds = ref<string[]>([])
+const exportError = ref('')
 
 watch(() => props.resume, (resume) => {
   name.value = resume.name
@@ -63,6 +69,42 @@ function submit() {
 }
 
 const basicValue = (key: string) => content.value.basic[key as keyof typeof content.value.basic] ?? ''
+const selectedPositions = computed(() => props.positions.filter((item) => positionIds.value.includes(item.id)))
+const positionMatches = computed(() => {
+  const query = positionQuery.value.trim().toLocaleLowerCase()
+  if (!query) return []
+  return props.positions.filter((item) => !positionIds.value.includes(item.id) && `${item.name} ${item.companyName ?? ''} ${item.postingTitle ?? ''}`.toLocaleLowerCase().includes(query)).slice(0, 10)
+})
+const attachmentCandidates = computed(() => {
+  const found: { id: string; label: string }[] = []
+  if (content.value.basic.portfolioFileId) found.push({ id: content.value.basic.portfolioFileId, label: '기본정보 · 포트폴리오 파일' })
+  for (const section of SECTIONS) content.value[section.key].forEach((row, index) => section.fields.filter((field) => field.kind === 'file').forEach((field) => {
+    const id = text(row, field.key)
+    if (id) found.push({ id, label: `${section.label} ${index + 1} · ${field.label}` })
+  }))
+  return found.filter((item, index) => found.findIndex((other) => other.id === item.id) === index)
+})
+
+function addPosition(id: string) {
+  positionIds.value = [...positionIds.value, id]
+  positionQuery.value = ''
+}
+function removePosition(id: string) {
+  positionIds.value = positionIds.value.filter((value) => value !== id)
+}
+async function downloadSelected() {
+  exportError.value = ''
+  try { await downloadAttachments(name.value.trim() || '이력서', attachmentIds.value) }
+  catch (error) { exportError.value = error instanceof Error ? error.message : '첨부파일을 내려받지 못했습니다.' }
+}
+async function exportWord() {
+  downloadWord(name.value.trim() || '이력서', content.value, selectedPositions.value)
+  await downloadSelected()
+}
+async function exportPdf() {
+  window.print()
+  await downloadSelected()
+}
 </script>
 
 <template>
@@ -78,6 +120,7 @@ const basicValue = (key: string) => content.value.basic[key as keyof typeof cont
       />
       <span v-if="dirty" class="resume-dirty">변경됨 · 저장 전</span>
       <div class="page-tools">
+        <button type="button" class="button secondary compact" @click="exportOpen = !exportOpen">내보내기</button>
         <button type="button" class="button secondary compact" :disabled="saving" @click="emit('copy')">복제</button>
         <button type="button" class="button danger compact" :disabled="saving" @click="emit('remove')">삭제</button>
         <button type="button" class="button primary" :disabled="saving || !dirty || !name.trim()" @click="submit">
@@ -88,23 +131,36 @@ const basicValue = (key: string) => content.value.basic[key as keyof typeof cont
     <p v-if="!name.trim()" class="field-error">이력서 이름을 입력해 주세요.</p>
     <p v-else-if="apiFieldErrors.name" class="field-error">{{ apiFieldErrors.name }}</p>
 
-    <section class="resume-section">
-      <div class="resume-section__head"><h2>지원 직무 <span class="page-count">{{ positionIds.length }}</span></h2></div>
-      <p v-if="positions.length === 0" class="body-copy empty">연결할 모집 직무가 없습니다.</p>
-      <div v-else class="position-picker">
-        <label v-for="position in positions" :key="position.id" class="position-option">
-          <input v-model="positionIds" type="checkbox" :value="position.id" />
-          <span><strong>{{ position.name }}</strong><small>{{ position.companyName || '회사 미입력' }} · {{ position.postingTitle || '공고 미입력' }}</small></span>
-        </label>
-      </div>
+    <section v-if="exportOpen" class="resume-section export-panel">
+      <div class="resume-section__head"><h2>이력서 내보내기</h2></div>
+      <p class="body-copy">PDF는 인쇄 창에서 “PDF로 저장”을 선택합니다. Word는 .doc 파일로 내려받습니다.</p>
+      <fieldset v-if="attachmentCandidates.length" class="export-files">
+        <legend>함께 받을 첨부파일 (선택 시 ZIP)</legend>
+        <label v-for="item in attachmentCandidates" :key="item.id"><input v-model="attachmentIds" type="checkbox" :value="item.id" /> {{ item.label }}</label>
+      </fieldset>
+      <div class="page-tools"><button type="button" class="button secondary" @click="exportPdf">PDF 저장</button><button type="button" class="button primary" @click="exportWord">Word 저장</button></div>
+      <p v-if="exportError" class="field-error" role="alert">{{ exportError }}</p>
     </section>
 
-    <ResumeQuestions :resume-id="resume.id" @open-introductions="emit('openIntroductions')" />
+    <section class="resume-section">
+      <div class="resume-section__head"><h2>지원 직무 <span class="page-count">{{ positionIds.length }}</span></h2></div>
+      <div class="selected-positions">
+        <button v-for="position in selectedPositions" :key="position.id" type="button" class="chip" :aria-label="`${position.name} 연결 해제`" @click="removePosition(position.id)">{{ position.name }} ×</button>
+      </div>
+      <label class="field full"><span>직무 검색</span><input v-model="positionQuery" placeholder="직무명, 기업명, 공고명 검색" /></label>
+      <p v-if="positions.length === 0" class="body-copy empty">연결할 모집 직무가 없습니다.</p>
+      <div v-else-if="positionMatches.length" class="position-picker">
+        <button v-for="position in positionMatches" :key="position.id" type="button" class="position-option" @click="addPosition(position.id)">
+          <span><strong>{{ position.name }}</strong><small>{{ position.companyName || '회사 미입력' }} · {{ position.postingTitle || '공고 미입력' }}</small></span>
+        </button>
+      </div>
+    </section>
 
     <section class="resume-section">
       <div class="resume-section__head"><h2>기본정보</h2></div>
       <div class="form-grid">
-        <label v-for="field in BASIC_FIELDS" :key="field.key" class="field" :class="{ full: field.kind === 'url' }">
+        <AttachmentField v-for="field in BASIC_FIELDS.filter((item) => item.kind === 'file')" :key="field.key" :id="basicValue(field.key)" :label="field.label" @update:id="setBasic(field.key, $event)" />
+        <label v-for="field in BASIC_FIELDS.filter((item) => item.kind !== 'file')" :key="field.key" class="field" :class="{ full: field.kind === 'url' }">
           <span>{{ field.label }}</span>
           <input
             :value="basicValue(field.key)"
@@ -123,5 +179,6 @@ const basicValue = (key: string) => content.value.basic[key as keyof typeof cont
       :rows="content[section.key]"
       @update:rows="setRows(section.key, $event)"
     />
+    <ResumeQuestions :resume-id="resume.id" @open-introductions="emit('openIntroductions')" />
   </main>
 </template>

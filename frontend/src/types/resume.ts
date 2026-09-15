@@ -10,6 +10,7 @@ export interface BasicInfo {
   email: string
   address: string
   portfolioUrl: string
+  portfolioFileId: string
   githubUrl: string
 }
 
@@ -96,6 +97,7 @@ export const BASIC_FIELDS: FieldConfig[] = [
   { key: 'email', label: '이메일', kind: 'text' },
   { key: 'address', label: '주소', kind: 'url' },
   { key: 'portfolioUrl', label: '포트폴리오', kind: 'url', placeholder: 'https://' },
+  { key: 'portfolioFileId', label: '포트폴리오 파일', kind: 'file' },
   { key: 'githubUrl', label: 'GitHub', kind: 'url', placeholder: 'https://github.com/' },
 ]
 
@@ -164,6 +166,7 @@ export const SECTIONS: SectionConfig[] = [
       { key: 'startYm', label: '시작년월', kind: 'ym', placeholder: YM },
       { key: 'endYm', label: '종료년월', kind: 'ym', placeholder: YM },
       { key: 'description', label: '활동내용', kind: 'textarea' },
+      { key: 'fileId', label: '활동 첨부', kind: 'file' },
     ],
   },
   {
@@ -181,6 +184,7 @@ export const SECTIONS: SectionConfig[] = [
       { key: 'name', label: '수상명', kind: 'text' },
       { key: 'issuer', label: '수여 기관', kind: 'text' },
       { key: 'awardedYm', label: '수상 일자', kind: 'ym', placeholder: YM },
+      { key: 'fileId', label: '수상 증빙', kind: 'file' },
     ],
   },
   {

@@ -12,4 +12,6 @@ public interface ResumeRepository extends JpaRepository<Resume, UUID> {
     Optional<Resume> findByIdAndOwnerId(UUID id, UUID ownerId);
 
     List<Resume> findAllByOwnerIdOrderByUpdatedAtDesc(UUID ownerId);
+
+    List<Resume> findAllByIdInAndOwnerId(List<UUID> ids, UUID ownerId);
 }

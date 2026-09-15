@@ -70,6 +70,7 @@ class McpOAuthTest {
         mvc.perform(get(ApiPaths.OAUTH_METADATA)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.issuer").value("http://127.0.0.1:8088"))
                 .andExpect(jsonPath("$.client_id_metadata_document_supported").value(true))
+                .andExpect(jsonPath("$.grant_types_supported").value(org.hamcrest.Matchers.hasItem("refresh_token")))
                 .andExpect(jsonPath("$.code_challenge_methods_supported[0]").value("S256"));
         mvc.perform(post(ApiPaths.MCP).session(session()).contentType("application/json")
                 .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
@@ -99,12 +100,23 @@ class McpOAuthTest {
                 .param("client_id", "jobsight-plugin").param("redirect_uri", CALLBACK).param("code", code)
                 .param("code_verifier", verifier).param("resource", RESOURCE))
                 .andExpect(status().isOk()).andReturn().getResponse();
-        String token = mapper.readTree(tokenResponse.getContentAsString()).get("access_token").asText();
+        var issued = mapper.readTree(tokenResponse.getContentAsString());
+        String token = issued.get("access_token").asText();
+        String refresh = issued.get("refresh_token").asText();
         mvc.perform(post(ApiPaths.MCP).header("Authorization", "Bearer " + token).contentType("application/json")
                 .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.result.tools").isArray());
+        var refreshed = mvc.perform(post(ApiPaths.MCP_TOKEN).param("grant_type", "refresh_token")
+                .param("client_id", "jobsight-plugin").param("refresh_token", refresh).param("resource", RESOURCE))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        var rotated = mapper.readTree(refreshed.getContentAsString());
+        assertThat(rotated.get("refresh_token").asText()).isNotEqualTo(refresh);
+        mvc.perform(post(ApiPaths.MCP_TOKEN).param("grant_type", "refresh_token")
+                .param("client_id", "jobsight-plugin").param("refresh_token", refresh).param("resource", RESOURCE))
+                .andExpect(status().isBadRequest());
         account.changeStatus(UserStatus.SUSPENDED);
-        mvc.perform(get(ApiPaths.MCP).header("Authorization", "Bearer " + token)).andExpect(status().isUnauthorized());
+        mvc.perform(get(ApiPaths.MCP).header("Authorization", "Bearer " + rotated.get("access_token").asText()))
+                .andExpect(status().isUnauthorized());
         mvc.perform(post(ApiPaths.MCP_TOKEN).param("grant_type", "authorization_code")
                 .param("client_id", "jobsight-plugin").param("redirect_uri", CALLBACK).param("code", code)
                 .param("code_verifier", verifier).param("resource", RESOURCE)).andExpect(status().isBadRequest());
@@ -114,7 +126,9 @@ class McpOAuthTest {
         mvc.perform(get(ApiPaths.PLUGIN_CONFIG)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.mcpUrl").value(RESOURCE));
         var skill = mvc.perform(get(ApiPaths.PLUGIN_SKILL)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        assertThat(skill).contains("position_replace_references", "company_content_create");
+        assertThat(skill).contains("position_replace_references", "company_content_create",
+                "resume_create", "resume_update", "resume_delete",
+                "self_intro_create", "self_intro_update", "self_intro_delete");
         var download = mvc.perform(get(ApiPaths.PLUGIN_DOWNLOAD)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
         var entries = new HashMap<String, String>();
         try (var zip = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(download))) {

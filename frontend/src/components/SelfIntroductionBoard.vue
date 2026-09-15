@@ -22,9 +22,14 @@ const saving = ref(false)
 const errorMessage = ref('')
 const editingId = ref<string | null>(null)
 const deleteTarget = ref<SelfIntroduction | null>(null)
-const draft = reactive<SelfIntroductionPayload>({ resumeId: '', question: '', answer: '' })
+const draft = reactive<SelfIntroductionPayload>({ resumeIds: [], question: '', answer: '' })
+const resumeQuery = ref('')
 
 const resumeNames = computed(() => new Map(resumes.value.map((resume) => [resume.id, resume.name])))
+const filteredResumes = computed(() => {
+  const needle = resumeQuery.value.trim().toLowerCase()
+  return resumes.value.filter((resume) => !needle || resume.name.toLowerCase().includes(needle))
+})
 
 async function load() {
   loading.value = true
@@ -41,12 +46,12 @@ async function load() {
 
 function openNew() {
   editingId.value = ''
-  Object.assign(draft, { resumeId: resumes.value[0]?.id ?? '', question: '', answer: '' })
+  Object.assign(draft, { resumeIds: resumes.value[0] ? [resumes.value[0].id] : [], question: '', answer: '' })
 }
 
 function openEdit(item: SelfIntroduction) {
   editingId.value = item.id
-  Object.assign(draft, { resumeId: item.resumeId, question: item.question, answer: item.answer ?? '' })
+  Object.assign(draft, { resumeIds: [...item.resumeIds], question: item.question, answer: item.answer ?? '' })
 }
 
 function editFromDoubleClick(event: MouseEvent, item: SelfIntroduction) {
@@ -58,7 +63,7 @@ function closeEditor() {
 }
 
 async function save() {
-  if (!draft.resumeId || !draft.question.trim()) return
+  if (!draft.resumeIds.length || !draft.question.trim()) return
   saving.value = true
   errorMessage.value = ''
   const payload = { ...draft, question: draft.question.trim() }
@@ -123,12 +128,14 @@ onMounted(async () => {
     <section v-if="editingId !== null" class="resume-section intro-editor">
       <div class="resume-section__head"><h2>{{ editingId ? '문항 수정' : '문항 추가' }}</h2></div>
       <form class="form-grid" @submit.prevent="save">
-        <label class="field full">
-          <span>이력서</span>
-          <select v-model="draft.resumeId" required>
-            <option v-for="resume in resumes" :key="resume.id" :value="resume.id">{{ resume.name }}</option>
-          </select>
-        </label>
+        <fieldset class="field full resume-links">
+          <legend>연결 이력서 <span class="page-count">{{ draft.resumeIds.length }}</span></legend>
+          <input v-model="resumeQuery" type="search" placeholder="이력서 이름 검색" aria-label="연결 이력서 검색" />
+          <label v-for="resume in filteredResumes" :key="resume.id" class="position-option compact-option">
+            <input v-model="draft.resumeIds" type="checkbox" :value="resume.id" />
+            <span>{{ resume.name }}</span>
+          </label>
+        </fieldset>
         <label class="field full">
           <span>질문</span>
           <textarea v-model="draft.question" maxlength="1000" rows="3" required />
@@ -139,7 +146,7 @@ onMounted(async () => {
         </label>
         <div class="full page-tools">
           <button type="button" class="button secondary" @click="closeEditor">취소</button>
-          <button type="submit" class="button primary" :disabled="saving || !draft.resumeId || !draft.question.trim()">
+          <button type="submit" class="button primary" :disabled="saving || !draft.resumeIds.length || !draft.question.trim()">
             {{ saving ? '저장 중…' : '저장' }}
           </button>
         </div>
@@ -160,7 +167,9 @@ onMounted(async () => {
         @dblclick="editFromDoubleClick($event, item)"
       >
         <div class="intro-card__head">
-          <span class="chip">{{ resumeNames.get(item.resumeId) ?? '삭제된 이력서' }}</span>
+          <span class="card__chips">
+            <span v-for="resumeId in item.resumeIds" :key="resumeId" class="chip">{{ resumeNames.get(resumeId) ?? '삭제된 이력서' }}</span>
+          </span>
           <div class="page-tools">
             <button type="button" class="button ghost compact" @click="openEdit(item)">수정</button>
             <button type="button" class="button danger compact" @click="deleteTarget = item">삭제</button>
