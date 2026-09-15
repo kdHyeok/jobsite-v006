@@ -10,6 +10,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -50,6 +51,15 @@ public class AppUser {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(name = "admin_request_count_date")
+    private LocalDate adminRequestCountDate;
+
+    @Column(name = "admin_request_count", nullable = false)
+    private int adminRequestCount;
+
+    @Column(name = "last_admin_request_at")
+    private Instant lastAdminRequestAt;
 
     protected AppUser() {
     }
@@ -100,6 +110,12 @@ public class AppUser {
         this.status = UserStatus.ACTIVE;
     }
 
+    public void recordAdminRequest(LocalDate date, Instant now) {
+        adminRequestCount = date.equals(adminRequestCountDate) ? adminRequestCount + 1 : 1;
+        adminRequestCountDate = date;
+        lastAdminRequestAt = now;
+    }
+
     public boolean isGoogleLinked() {
         return googleSub != null;
     }
@@ -135,4 +151,7 @@ public class AppUser {
     public UserStatus getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public LocalDate getAdminRequestCountDate() { return adminRequestCountDate; }
+    public int getAdminRequestCount() { return adminRequestCount; }
+    public Instant getLastAdminRequestAt() { return lastAdminRequestAt; }
 }

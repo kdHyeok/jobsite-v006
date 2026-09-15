@@ -4,6 +4,7 @@
 
 계정을 승인·정지·삭제하고, 권한과 표시 이름을 바꾸고, 신규 가입 자동 승인 여부를 정한다.
 계정마다 **등록한 데이터 개수**(기업·채용공고·모집 직무)를 함께 보여 어떤 계정이 실제로 쓰이는지 판단한다.
+`요청 관리` 탭에서는 사용자의 버그 제보·기능 제안을 확인하고 피드백을 관리한다. 세부 규칙은 [requests.md](requests.md)를 따른다.
 
 ## 진입점
 
@@ -13,14 +14,14 @@
 | 계정 조작 | `user/AppUserService` — 승인·상태·권한·이름·삭제 |
 | 가입 토글 | `setting/AppSettingService` — `auto_approve_signup` |
 | **등록 데이터 개수** | `admin/AdminStatsService` + 세 리포지토리의 `countGroupedByOwner()` |
+| 사용자 요청·피드백 | `adminrequest/AdminRequestAdminController` · `AdminRequestService` |
 | 화면 | `frontend/src/components/AdminView.vue` (`/admin`) |
 | 화면 진입 | 탑바 `☰ 메뉴` → `관리자`. ADMIN 에게만 보인다 |
 | MCP | `admin_*` 도구 — `jobsight.admin` scope **와** 실제 `ROLE_ADMIN` 을 둘 다 요구 |
 
 ## 불변 조건
 
-1. **관리자는 개수만 본다.** 소유자 격리(다른 계정 데이터는 404)의 유일한 예외이고, 그 예외는 **집계 숫자에 한정**된다.
-   제목·회사명 같은 내용은 어떤 관리자 엔드포인트도 돌려주지 않는다 — `docs/decisions.md`.
+1. **관리자의 소유자 격리 예외는 두 가지뿐이다.** 기업·공고·직무는 집계 숫자만 보고, 사용자가 관리자에게 명시적으로 보낸 요청 본문과 피드백만 관리한다. 그 밖의 타인 데이터 내용은 열지 않는다 — `docs/decisions.md`.
 2. **자기 계정과 마지막 활성 관리자는 못 건드린다.** 상태·권한 변경, 삭제 모두 400. 락아웃 방지.
 3. **`APP_ADMIN_EMAIL` 이 이긴다.** 그 이메일은 로그인마다 ADMIN/ACTIVE 로 복구된다. 화면에서 내려도 소용없다.
 4. **이메일은 편집 대상이 아니다.** Google 신원이자 계정 연결 키다. 관리자도 `display_name` 만 바꾼다.

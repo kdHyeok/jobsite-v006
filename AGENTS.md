@@ -29,6 +29,7 @@ PostgreSQL + Spring Boot 4.1(Java 21) + Vue 3(TypeScript) + nginx, Docker Compos
 | 이력서(버전·섹션 JSON) | [docs/resumes.md](docs/resumes.md) |
 | 이력서 증빙 파일 첨부 | [docs/attachments.md](docs/attachments.md) |
 | 관리자 콘솔·계정별 등록 수 | [docs/admin.md](docs/admin.md) |
+| 관리자 요청·피드백 | [docs/requests.md](docs/requests.md) |
 | MCP·OAuth 위임·플러그인 | [docs/mcp-plugin.md](docs/mcp-plugin.md) |
 | 화면 배치·색·컴포넌트 | [docs/design-system.md](docs/design-system.md) |
 | `nginx.conf`, `compose*.yaml`, `.github/**`, 배포 | [docs/nginx-deploy.md](docs/nginx-deploy.md) |

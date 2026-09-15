@@ -12,6 +12,7 @@ import {
   updateAutoApproveSignup,
 } from '../api/admin'
 import ConfirmDialog from './ConfirmDialog.vue'
+import AdminRequestPanel from './AdminRequestPanel.vue'
 import { roleLabels, userStatusLabels } from '../types/auth'
 import type { AdminUser, Me, UserDataCount, UserRole, UserStatus } from '../types/auth'
 
@@ -29,6 +30,7 @@ const errorMessage = ref('')
 const notice = ref('')
 const busyId = ref<string | null>(null)
 const savingSettings = ref(false)
+const section = ref<'accounts' | 'requests'>('accounts')
 
 // 이름 인라인 편집
 const editingId = ref<string | null>(null)
@@ -182,6 +184,14 @@ onMounted(load)
       </div>
     </div>
 
+    <div class="tabs" role="tablist" aria-label="관리자 화면">
+      <button type="button" role="tab" :aria-selected="section === 'accounts'" :class="{ active: section === 'accounts' }" @click="section = 'accounts'">계정 관리</button>
+      <button type="button" role="tab" :aria-selected="section === 'requests'" :class="{ active: section === 'requests' }" @click="section = 'requests'">요청 관리</button>
+    </div>
+
+    <AdminRequestPanel v-if="section === 'requests'" />
+    <template v-else>
+
     <div v-if="notice" class="notice success" role="status">{{ notice }}</div>
     <div v-if="errorMessage" class="notice error" role="alert">
       <span>{{ errorMessage }}</span>
@@ -329,6 +339,7 @@ onMounted(load)
         </tbody>
       </table>
     </section>
+    </template>
   </main>
 
   <ConfirmDialog

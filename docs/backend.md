@@ -11,7 +11,7 @@
 | 현재 사용자 읽기 | `auth/CurrentUser.java` — 서비스가 직접 호출, 컨트롤러는 소유자를 넘기지 않는다 |
 | Google 클라이언트 등록 (조건부) | `config/GoogleOAuthConfig.java` |
 | 에러 응답 형식 | `common/GlobalExceptionHandler.java`, `common/ApiError`, `common/ApiRuleException` |
-| 스키마 | `resources/db/migration/V1~V13` — Flyway, `ddl-auto: validate` |
+| 스키마 | `resources/db/migration/V1~V16` — Flyway, `ddl-auto: validate` |
 | 설정 | `resources/application.yml` — 비밀값은 `configtree:/run/secrets/` |
 
 ## 요청 한 번의 흐름
@@ -26,7 +26,7 @@ nginx → SecurityFilterChain
 
 ## 계정 모델
 
-- `app_users(id, email, google_sub, display_name, role, status)` — 식별자는 `google_sub`. 이메일은 검증된 경우에만 기존 계정 연결에 쓴다. `display_name` 만 사용자·관리자가 편집한다(첫 로그인 때 Google `name` 으로 초기화).
+- `app_users(id, email, google_sub, display_name, role, status, admin_request_*)` — 식별자는 `google_sub`. 이메일은 검증된 경우에만 기존 계정 연결에 쓴다. `display_name` 만 사용자·관리자가 편집한다(첫 로그인 때 Google `name` 으로 초기화). `admin_request_*`는 삭제로 우회할 수 없는 요청 생성 제한 상태다.
 - 계정 삭제(`DELETE /api/admin/users/{id}`)는 `companies.owner_id` FK 의 `ON DELETE CASCADE` 로 소유 기업까지 지운다. 자기 자신·마지막 활성 관리자는 거부.
 - 상태 `PENDING/ACTIVE/SUSPENDED/REJECTED`, 권한 `USER/ADMIN`. 로그인은 ACTIVE 만.
 - 첫 Google 로그인의 초기 상태는 `app_settings.auto_approve_signup` 이 정한다: true → ACTIVE(바로 이용), false → PENDING(승인 대기). 가입을 막는 상태는 없다(V8).

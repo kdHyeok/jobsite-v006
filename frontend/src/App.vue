@@ -9,6 +9,7 @@ import PostingBoard from './components/PostingBoard.vue'
 import ResumeBoard from './components/ResumeBoard.vue'
 import UserMenu from './components/UserMenu.vue'
 import PluginGuide from './components/PluginGuide.vue'
+import AdminRequestWidget from './components/AdminRequestWidget.vue'
 import { FOCUS_QUERY, ROUTES } from './routes'
 import type { Me } from './types/auth'
 
@@ -188,5 +189,6 @@ onUnmounted(() => {
       @open-position="navigate(ROUTES.positions, $event)"
       @open-company="navigate(ROUTES.companies, $event)"
     />
+    <AdminRequestWidget v-if="me.authenticated" />
   </div>
 </template>
