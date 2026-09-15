@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
+import type { Position } from '../types/position'
 import ResumeSection from './ResumeSection.vue'
+import ResumeQuestions from './ResumeQuestions.vue'
 import type { Resume, ResumeContent, ResumePayload, Row, SectionKey } from '../types/resume'
 import { BASIC_FIELDS, MAX_LENGTH, SECTIONS, fillContent } from '../types/resume'
 
@@ -12,6 +14,7 @@ const props = defineProps<{
   resume: Resume
   saving: boolean
   apiFieldErrors: Record<string, string>
+  positions: Position[]
 }>()
 
 const emit = defineEmits<{
@@ -19,20 +22,24 @@ const emit = defineEmits<{
   copy: []
   remove: []
   back: [dirty: boolean]
+  openIntroductions: []
 }>()
 
 const name = ref(props.resume.name)
 const content = ref<ResumeContent>(fillContent(props.resume.content))
+const positionIds = ref<string[]>([...props.resume.positionIds])
 
 watch(() => props.resume, (resume) => {
   name.value = resume.name
   content.value = fillContent(resume.content)
+  positionIds.value = [...resume.positionIds]
 })
 
 /** 저장한 시점의 문서와 깊은 비교. 입력마다 새 객체를 만드니 JSON 비교가 정직하다. */
 const dirty = computed(() =>
   name.value !== props.resume.name
-  || JSON.stringify(content.value) !== JSON.stringify(fillContent(props.resume.content)),
+  || JSON.stringify(content.value) !== JSON.stringify(fillContent(props.resume.content))
+  || JSON.stringify([...positionIds.value].sort()) !== JSON.stringify([...props.resume.positionIds].sort()),
 )
 
 // 저장 안 한 변경이 있으면 탭 닫기·새로고침에 경고. 한 줄이면 되는 일을 라이브러리로 하지 않는다.
@@ -52,7 +59,7 @@ function setRows(key: SectionKey, rows: Row[]) {
 
 function submit() {
   if (!name.value.trim()) return
-  emit('save', { name: name.value.trim(), content: content.value })
+  emit('save', { name: name.value.trim(), content: content.value, positionIds: [...positionIds.value] })
 }
 
 const basicValue = (key: string) => content.value.basic[key as keyof typeof content.value.basic] ?? ''
@@ -80,6 +87,19 @@ const basicValue = (key: string) => content.value.basic[key as keyof typeof cont
     </div>
     <p v-if="!name.trim()" class="field-error">이력서 이름을 입력해 주세요.</p>
     <p v-else-if="apiFieldErrors.name" class="field-error">{{ apiFieldErrors.name }}</p>
+
+    <section class="resume-section">
+      <div class="resume-section__head"><h2>지원 직무 <span class="page-count">{{ positionIds.length }}</span></h2></div>
+      <p v-if="positions.length === 0" class="body-copy empty">연결할 모집 직무가 없습니다.</p>
+      <div v-else class="position-picker">
+        <label v-for="position in positions" :key="position.id" class="position-option">
+          <input v-model="positionIds" type="checkbox" :value="position.id" />
+          <span><strong>{{ position.name }}</strong><small>{{ position.companyName || '회사 미입력' }} · {{ position.postingTitle || '공고 미입력' }}</small></span>
+        </label>
+      </div>
+    </section>
+
+    <ResumeQuestions :resume-id="resume.id" @open-introductions="emit('openIntroductions')" />
 
     <section class="resume-section">
       <div class="resume-section__head"><h2>기본정보</h2></div>

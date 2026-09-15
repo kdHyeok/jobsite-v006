@@ -230,6 +230,7 @@ public class JobPostingService {
                 request.deadlineAt(),
                 request.status(),
                 normalize(request.qualifications()),
+                normalize(request.memo()),
                 steps
         );
     }

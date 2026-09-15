@@ -7,11 +7,12 @@
 | 모든 HTTP 경로 상수 | `common/ApiPaths.java` — 컨트롤러와 `SecurityConfig` 가 같은 상수를 쓴다 |
 | 인가 규칙, CSRF, OAuth 실패 처리 | `auth/SecurityConfig.java` |
 | Google 로그인 → 계정 해석 | `auth/GoogleOidcUserService.java` → `user/AppUserService.resolveGoogleUser` |
-| 로그인 principal | 브라우저 `auth/AppOidcUser.java`, MCP 위임 `mcp/McpPrincipal.java` |
+| 로그인 principal | Google `auth/AppOidcUser.java`, 갱신 세션 `auth/AppSessionUser.java`, MCP 위임 `mcp/McpPrincipal.java` |
+| 브라우저 세션 갱신 | `auth/BrowserRefreshTokenService.java` — HttpOnly opaque 토큰 회전·해시 저장·폐기 |
 | 현재 사용자 읽기 | `auth/CurrentUser.java` — 서비스가 직접 호출, 컨트롤러는 소유자를 넘기지 않는다 |
 | Google 클라이언트 등록 (조건부) | `config/GoogleOAuthConfig.java` |
 | 에러 응답 형식 | `common/GlobalExceptionHandler.java`, `common/ApiError`, `common/ApiRuleException` |
-| 스키마 | `resources/db/migration/V1~V16` — Flyway, `ddl-auto: validate` |
+| 스키마 | `resources/db/migration/V1~V19` — Flyway, `ddl-auto: validate` |
 | 설정 | `resources/application.yml` — 비밀값은 `configtree:/run/secrets/` |
 
 ## 요청 한 번의 흐름
@@ -27,6 +28,7 @@ nginx → SecurityFilterChain
 ## 계정 모델
 
 - `app_users(id, email, google_sub, display_name, role, status, admin_request_*)` — 식별자는 `google_sub`. 이메일은 검증된 경우에만 기존 계정 연결에 쓴다. `display_name` 만 사용자·관리자가 편집한다(첫 로그인 때 Google `name` 으로 초기화). `admin_request_*`는 삭제로 우회할 수 없는 요청 생성 제한 상태다.
+- `browser_refresh_tokens(id, owner_id, token_hash, expires_at, created_at, last_used_at)` — 브라우저 장기 로그인용이다. 원문은 저장하지 않고 30일 절대 만료 안에서 매 갱신마다 해시를 회전한다(V17).
 - 계정 삭제(`DELETE /api/admin/users/{id}`)는 `companies.owner_id` FK 의 `ON DELETE CASCADE` 로 소유 기업까지 지운다. 자기 자신·마지막 활성 관리자는 거부.
 - 상태 `PENDING/ACTIVE/SUSPENDED/REJECTED`, 권한 `USER/ADMIN`. 로그인은 ACTIVE 만.
 - 첫 Google 로그인의 초기 상태는 `app_settings.auto_approve_signup` 이 정한다: true → ACTIVE(바로 이용), false → PENDING(승인 대기). 가입을 막는 상태는 없다(V8).
@@ -41,6 +43,7 @@ nginx → SecurityFilterChain
 
 - Jackson 3 → `import tools.jackson.databind.ObjectMapper`, 의존성 `spring-boot-starter-jackson`. `com.fasterxml.jackson.databind` 는 컴파일 클래스패스에 없다.
 - CSRF → `CsrfTokenRequestAttributeHandler` 명시 (기본 `XorCsrfTokenRequestAttributeHandler` 는 쿠키 원본 토큰을 거부해 모든 POST 가 403).
+- 브라우저 세션은 30분 유휴 만료다. `POST /api/auth/refresh`는 CSRF 검증 뒤 ACTIVE 계정의 토큰만 회전하고 `SecurityContextRepository`에 새 세션을 저장한다. 자세한 계약은 `docs/auth-session.md`.
 - OAuth2 등록은 프로퍼티가 아니라 `GoogleOAuthConfig` 빈. `spring.security.oauth2.client.registration.*` 에 빈 client-id 가 있으면 기동 실패.
 - springdoc 은 3.x (`springdoc-openapi-starter-webmvc-ui:3.1.0`). 2.x 는 Boot 4 에서 안 뜬다.
 - `redirect_uri` 는 `app.public-base-url` 로 조립. `X-Forwarded-*` 추론 금지.
@@ -50,6 +53,7 @@ nginx → SecurityFilterChain
 적용된 `V*.sql` 은 수정하지 않는다. 새 번호로 추가한다. 데이터 삭제는 마이그레이션에 넣지 않고 사람이 결정한다(V6 참고).
 
 기업별 뉴스·유튜브 자료는 `V11__company_contents.sql`과 `companycontent/*`가 담당한다. 회사·콘텐츠 조회 모두 `owner_id` 조건을 쿼리에 포함한다.
+이력서–직무 연결과 자기소개 문항은 `V19__resume_positions_and_self_introductions.sql`, `resume/*`, `selfintro/*`가 담당한다.
 
 ## 컴파일·테스트
 

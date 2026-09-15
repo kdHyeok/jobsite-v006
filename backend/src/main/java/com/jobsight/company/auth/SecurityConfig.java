@@ -55,6 +55,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             GoogleOidcUserService googleOidcUserService,
+            BrowserRefreshTokenService refreshTokens,
             @Value("${app.public-base-url}") String publicBaseUrl,
             ObjectProvider<ClientRegistrationRepository> clientRegistrations) throws Exception {
 
@@ -80,6 +81,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 ApiPaths.AUTH + ApiPaths.AUTH_ME,
                                 ApiPaths.AUTH + ApiPaths.AUTH_LOGIN_OPTIONS).permitAll()
+                        .requestMatchers(HttpMethod.POST, ApiPaths.AUTH + ApiPaths.AUTH_REFRESH).permitAll()
                         .requestMatchers(ApiPaths.ADMIN + "/**", ApiPaths.AUTH + ApiPaths.AUTH_ADMIN_CHECK)
                                 .hasRole("ADMIN")
                         // API 문서는 정보 노출이므로 관리자에게만 보인다.
@@ -88,6 +90,8 @@ public class SecurityConfig {
                 )
                 .logout(logout -> logout
                         .logoutUrl(ApiPaths.AUTH_LOGOUT)
+                        .addLogoutHandler((request, response, authentication) ->
+                                refreshTokens.revoke(request, response))
                         .logoutSuccessHandler((request, response, authentication) ->
                                 response.setStatus(HttpStatus.NO_CONTENT.value()))
                 )
@@ -102,6 +106,9 @@ public class SecurityConfig {
             http.oauth2Login(oauth -> oauth
                     .userInfoEndpoint(userInfo -> userInfo.oidcUserService(googleOidcUserService))
                     .successHandler((request, response, authentication) -> {
+                        if (authentication.getPrincipal() instanceof AppPrincipal principal) {
+                            refreshTokens.issue(response, principal.appUserId());
+                        }
                         var cache = new HttpSessionRequestCache();
                         var saved = cache.getRequest(request, response);
                         cache.removeRequest(request, response);

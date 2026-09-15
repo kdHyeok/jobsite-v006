@@ -3,6 +3,7 @@ package com.jobsight.company.resume;
 import com.jobsight.company.auth.CurrentUser;
 import com.jobsight.company.common.ApiRuleException;
 import com.jobsight.company.common.ResourceNotFoundException;
+import com.jobsight.company.position.PositionRepository;
 import com.jobsight.company.resume.dto.ResumeCopyRequest;
 import com.jobsight.company.resume.dto.ResumeRequest;
 import com.jobsight.company.resume.dto.ResumeResponse;
@@ -21,6 +22,7 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,13 +37,15 @@ public class ResumeService {
     private final CurrentUser currentUser;
     private final ObjectMapper objectMapper;
     private final Validator validator;
+    private final PositionRepository positionRepository;
 
     public ResumeService(ResumeRepository repository, CurrentUser currentUser, ObjectMapper objectMapper,
-                         Validator validator) {
+                         Validator validator, PositionRepository positionRepository) {
         this.repository = repository;
         this.currentUser = currentUser;
         this.objectMapper = objectMapper;
         this.validator = validator;
+        this.positionRepository = positionRepository;
     }
 
     /** 목록엔 content 를 싣지 않는다. 카드는 이름·수정일만 그린다. */
@@ -58,6 +62,7 @@ public class ResumeService {
     @Transactional
     public ResumeResponse create(ResumeRequest request) {
         Resume resume = new Resume(currentUser.id(), request.name().trim(), write(request.content()));
+        resume.replacePositions(ownedPositionIds(request.positionIds()));
         return toResponse(repository.save(resume));
     }
 
@@ -65,6 +70,7 @@ public class ResumeService {
     public ResumeResponse update(UUID id, ResumeRequest request) {
         Resume resume = findOwned(id);
         resume.update(request.name().trim(), write(request.content()));
+        resume.replacePositions(ownedPositionIds(request.positionIds()));
         return toResponse(repository.save(resume));
     }
 
@@ -73,6 +79,7 @@ public class ResumeService {
     public ResumeResponse copy(UUID id, ResumeCopyRequest request) {
         Resume source = findOwned(id);
         Resume copy = new Resume(currentUser.id(), request.name().trim(), source.getContent());
+        copy.replacePositions(source.getPositionIds());
         return toResponse(repository.save(copy));
     }
 
@@ -192,6 +199,17 @@ public class ResumeService {
 
     private ResumeResponse toResponse(Resume resume) {
         return ResumeResponse.of(resume, read(resume.getContent()));
+    }
+
+    private Set<UUID> ownedPositionIds(List<UUID> rawIds) {
+        Set<UUID> ids = new LinkedHashSet<>(rawIds == null ? List.of() : rawIds);
+        if (ids.isEmpty()) return ids;
+        Set<UUID> owned = new LinkedHashSet<>();
+        positionRepository.findAllByIdInAndOwnerId(ids, currentUser.id()).forEach(position -> owned.add(position.getId()));
+        for (UUID id : ids) {
+            if (!owned.contains(id)) throw new ResourceNotFoundException(id);
+        }
+        return ids;
     }
 
     /** null 은 빈 문서로. 저장되는 JSON 이 항상 같은 모양이어야 읽는 쪽이 편하다. */

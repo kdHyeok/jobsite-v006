@@ -39,6 +39,8 @@ OAuth가 필요하면 클라이언트의 연결 흐름을 사용한다. 비밀�
 기업명 `name`, 홈페이지 `websiteUrl`, 업종 배열 `industries`, 형태 `companySize`, 원 단위 매출 `annualRevenue`,
 표시 단위 `revenueUnit`, 사원수 `employeeCount`, 주소 `address`, 설립일 `foundedOn`, 소개 `summary`,
 복지 `benefits`, 메모 `memo`를 관리한다. 설립연월만 있으면 일은 01로 보낸다.
+기업·공고·직무의 `memo`는 원문 Markdown이다. `#`~`######` 제목, `-` 목록, `1.` 번호 목록,
+들여쓰기, http(s) 자동 링크와 `[표시이름](https://...)` 링크를 사용할 수 있다.
 기업 형태는 STARTUP/SMALL/MEDIUM/LARGE/PUBLIC이다.
 
 매출은 **항상 원으로 전송**한다. 예: 25억 원은 `annualRevenue:2500000000`, `revenueUnit:"HUNDRED_MILLION"`.
@@ -55,6 +57,7 @@ OAuth가 필요하면 클라이언트의 연결 흐름을 사용한다. 비밀�
 조회 시 마감이 지난 관심·작성 중 공고가 자동 보관되므로 이 도구에도 쓰기 scope가 필요하다.
 `posting_get`, `posting_create`, `posting_update`, `posting_delete`를 사용한다.
 생성 시 `companyId` 또는 `companyName`, `title`, `employmentType`, `status`를 준다.
+공고 개인 기록은 `memo`에 넣는다.
 기업 ID 없이 이름을 주면 계정 안에서 공백 제거·소문자 비교로 찾거나 기업을 생성한다.
 고용형태는 FULL_TIME/CONTRACT/INTERN/PART_TIME/DISPATCH다.
 
@@ -93,7 +96,7 @@ INTERVIEW_PREP→INTERVIEW_REJECTED. 관심·작성 중은 상태 유지 후 보
 
 직무명 `name`, 팀 `team`, 역할 `role`, 담당업무 `responsibilities`, 영향력 `impact`,
 요구 역량 `requiredSkills`, 우대 역량 `preferredSkills`, 성장 방향 `growth`, 취득 경험 `experience`,
-모집인원 `headcount`(문자열), 근무지 `workLocation`, 기술 스택 배열 `techStack`을 관리한다.
+모집인원 `headcount`(문자열), 근무지 `workLocation`, 개인 기록 `memo`, 기술 스택 배열 `techStack`을 관리한다.
 읽어서 보여줄 때 요구/우대 역량을 성장/취득 경험보다 먼저 표시한다.
 
 ## 직무 참고 정보
@@ -120,11 +123,12 @@ preview는 기사 본문 미리보기/영상 설명, source는 신문사/채널�
 
 ## 이력서
 
-`resume_list` → `resume_get({id})` → `resume_create({request:{name,content?}})` / `resume_update({id,request})` /
+`resume_list` → `resume_get({id})` → `resume_create({request:{name,content?,positionIds?}})` / `resume_update({id,request})` /
 `resume_copy({id,request:{name}})` / `resume_delete({id})`.
 이력서는 **이름 + id 로 구분되는 여러 버전**이다. 같은 이름의 v1·v2 가 있을 수 있으니 목록에서 id 를 확인한다.
 `resume_list` 에는 content 가 없고 이름·수정일만 있다. 내용은 `resume_get` 으로 읽는다.
 `resume_copy` 는 같은 내용의 새 버전을 만든다(원본 그대로). 공고에 맞춘 변형은 복제 후 편집한다.
+`positionIds`는 이력서에 연결할 내 모집 직무 ID 전체이며 여러 개를 넣을 수 있다. 수정은 기존 연결까지 포함한 전체 배열을 보낸다.
 
 `content` 는 `basic` 과 8개 섹션 배열이다: educations(학력) · trainings(교육이수) · activities(대내외활동) ·
 experiences(경력) · awards(수상) · certificates(자격증) · skills(SW 역량) · projects(프로젝트).
@@ -141,9 +145,15 @@ experiences(경력) · awards(수상) · certificates(자격증) · skills(SW �
 `resume_update` 는 문서 **전체** 교체다. 섹션 하나만 바꿀 때는 행 도구가 안전하다.
 사용자가 이력서 항목을 읽어 달라고 하면 `resume_get` 결과의 섹션 순서(학력→…→프로젝트)대로 보여준다.
 
+## 자기소개 문항
+
+`self_intro_list({q?,resumeId?})`, `self_intro_get({id})`, `self_intro_create({request})`,
+`self_intro_update({id,request})`, `self_intro_delete({id})`를 사용한다. 요청 필드는 `resumeId`, `question`, `answer`다.
+검색어 `q`는 질문과 답변의 같은 단어를 BM25 점수순으로 찾는다. 문항은 반드시 내 이력서 하나에 속한다.
+
 ## 계정과 관리자
 
-`account_get`, `account_update({request:{displayName}})`는 내 계정 조회와 표시 이름 변경이다.
+`account_get`, `account_update({request:{displayName}})`는 내 계정 조회와 닉네임 변경이다.
 이메일·Google 신원은 변경하지 않는다. 브라우저 로그아웃은 사이트 메뉴에서, OAuth 연결 해제는 클라이언트에서 수행한다.
 
 관리자 요청일 때만 `admin_users_list`, `admin_user_set_status({id,request:{status}})`,
@@ -161,7 +171,8 @@ ADMIN/ACTIVE로 복구된다. 자기 자신·마지막 활성 관리자 변경/�
   업종 칩은 기존 값을 선택하거나 입력 후 Enter로 추가하고 x로 제거한다.
 - `/positions`: 직무 검색과 카드→상세/수정. 참고 정보는 기존 선택/신규 생성, 수정/떼기/삭제.
 - `/resumes`: 이력서 버전 카드→전체 페이지 편집기(`/resumes?focus=<id>`). 섹션마다 행 카드에 ↑↓×와 `행 추가`,
-  상단 `저장`(문서 통째), `복제`, `삭제`. 저장 전 변경은 `변경됨` 배지가 뜬다.
+  상단 `저장`(문서 통째), `복제`, `삭제`. 여러 직무 연결과 자기소개 질문 추가도 여기서 한다.
+- `/introductions`: 자기소개 질문·답변 검색, 추가, 수정, 삭제. 검색어가 나온 부분은 강조된다.
 - 기업 상세 공고 행 더블클릭→공고, 공고의 직무 행 더블클릭→직무. 부모 링크는 역방향 이동.
   `/companies?focus=<id>`, `/?focus=<id>`, `/positions?focus=<id>`는 항목 드로어 바로가기다.
 - API/MCP 결과에 근거해 성공을 보고한다. 브라우저에서만 입력했거나 저장 실패했으면 완료로 말하지 않는다.

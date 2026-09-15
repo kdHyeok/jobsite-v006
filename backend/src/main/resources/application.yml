@@ -28,6 +28,8 @@ server:
   forward-headers-strategy: framework
   servlet:
     session:
+      # 짧은 세션은 유지하고, 장기 로그인은 회전형 앱 리프레시 토큰으로만 연장한다.
+      timeout: 30m
       cookie:
         http-only: true
         # Strict 로 두면 Google 콜백(accounts.google.com 에서 오는 cross-site 네비게이션)에

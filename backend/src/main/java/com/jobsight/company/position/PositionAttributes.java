@@ -15,6 +15,7 @@ public record PositionAttributes(
         String preferredSkills,
         String headcount,
         String workLocation,
+        String memo,
         List<String> techStack
 ) {
 }

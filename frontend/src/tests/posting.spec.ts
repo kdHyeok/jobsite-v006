@@ -1,4 +1,6 @@
+import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import PostingDetail from '../components/PostingDetail.vue'
 import { daysUntil, ddayLabel, ddayTone, formatDeadline, groupPostingsByKanban, nextStepResult, postingDropTarget, postingTabCounts, toLocalInput, toUtcIso } from '../types/posting'
 import type { ApplicationStatus, JobPosting } from '../types/posting'
 
@@ -52,10 +54,28 @@ describe('절차 완료 전환', () => {
   })
 })
 
+describe('채용공고 더블클릭 편집', () => {
+  const posting: JobPosting = {
+    id: 'posting', companyId: 'company', companyName: '회사', title: '백엔드', postingUrl: null,
+    employmentType: 'FULL_TIME', deadlineAt: null, status: 'INTERESTED', qualifications: 'Java', memo: null,
+    targetPositionId: null, steps: [], positions: [], archived: false, createdAt: '', updatedAt: '',
+  }
+
+  it('읽기 값은 편집을 요청하고 상태 입력은 기존 동작을 유지한다', async () => {
+    const wrapper = mount(PostingDetail, { props: { posting } })
+
+    await wrapper.get('.body-copy').trigger('dblclick')
+    expect(wrapper.emitted('edit')).toHaveLength(1)
+
+    await wrapper.get('select').trigger('dblclick')
+    expect(wrapper.emitted('edit')).toHaveLength(1)
+  })
+})
+
 describe('지원 상태 칸반', () => {
   const posting = (status: ApplicationStatus): JobPosting => ({
     id: status, companyId: 'company', companyName: '회사', title: status, postingUrl: null,
-    employmentType: 'FULL_TIME', deadlineAt: null, status, qualifications: null,
+    employmentType: 'FULL_TIME', deadlineAt: null, status, qualifications: null, memo: null,
     targetPositionId: null, steps: [], positions: [], archived: false,
     createdAt: '', updatedAt: '',
   })

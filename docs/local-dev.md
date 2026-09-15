@@ -66,6 +66,7 @@ MSYS_NO_PATHCONV=1 docker run --rm -v jobsite-v006-gradle-cache:/root/.gradle \
 # 저장소 루트("$PWD")를 마운트하고 backend 로 들어간다 — backend/ 만 마운트하면
 # processResources 가 ../plugins/jobsight 를 못 찾아 McpOAuthTest 2건이 "Packaged JobSight skill is missing" 으로 깨진다.
 MSYS_NO_PATHCONV=1 docker run --rm \
+  -e JAVA_TOOL_OPTIONS="-XX:+StartAttachListener -Djdk.attach.allowAttachSelf=true -XX:+EnableDynamicAgentLoading" \
   -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal -e TESTCONTAINERS_RYUK_DISABLED=true \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v jobsite-v006-gradle-cache:/root/.gradle \
@@ -74,6 +75,7 @@ MSYS_NO_PATHCONV=1 docker run --rm \
 
 # backend 전체 테스트 — Linux 호스트 (배포 서버 등)
 docker run --rm --network host -e TESTCONTAINERS_HOST_OVERRIDE=127.0.0.1 \
+  -e JAVA_TOOL_OPTIONS="-XX:+StartAttachListener -Djdk.attach.allowAttachSelf=true -XX:+EnableDynamicAgentLoading" \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v jobsite-v006-gradle-cache:/root/.gradle \
   -v "$PWD":/workspace -w /workspace/backend eclipse-temurin:21-jdk-alpine \
@@ -82,6 +84,7 @@ docker run --rm --network host -e TESTCONTAINERS_HOST_OVERRIDE=127.0.0.1 \
 
 종료코드는 파이프 뒤가 아니라 `$?` 로 직접 읽는다. 결과 요약은 `backend/build/test-results/test/*.xml` 의 `tests= failures= errors=`.
 Ryuk 를 끄면 JVM 이 비정상 종료할 때 `postgres:17-alpine` 테스트 컨테이너가 남을 수 있다 — `docker ps -a` 로 확인한다.
+`StartAttachListener` 옵션은 Docker 안의 JDK 21에서 Mockito가 Byte Buddy agent를 붙일 때 attach 신호가 thread dump로 끝나는 환경을 피한다.
 
 ## 자주 걸리는 것
 

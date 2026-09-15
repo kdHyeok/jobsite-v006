@@ -88,6 +88,7 @@ public class PositionService {
                 normalize(request.preferredSkills()),
                 normalize(request.headcount()),
                 normalize(request.workLocation()),
+                normalize(request.memo()),
                 normalizeList(request.techStack())
         ));
         return toResponses(List.of(repository.save(position))).get(0);

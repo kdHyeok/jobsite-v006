@@ -18,7 +18,7 @@ import java.util.UUID;
  * OIDC 관련 값은 Spring 이 만들어 준 OidcUser 에 위임하고,
  * 권한과 애플리케이션 식별자만 우리 DB 의 계정에서 가져온다.
  */
-public class AppOidcUser implements OidcUser {
+public class AppOidcUser implements OidcUser, AppPrincipal {
     private final OidcUser delegate;
     private final UUID id;
     private final String email;

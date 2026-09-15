@@ -322,6 +322,7 @@ onMounted(async () => {
     </template>
     <PostingDetail
       :posting="selected"
+      @edit="startEdit"
       @change-status="changeStatus"
       @change-step="changeStep"
       @open-position="emit('openPosition', $event)"

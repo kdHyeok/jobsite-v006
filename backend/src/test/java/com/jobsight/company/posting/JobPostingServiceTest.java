@@ -50,7 +50,7 @@ class JobPostingServiceTest {
 
     private static JobPosting posting(Instant deadline, ApplicationStatus status) {
         JobPosting created = new JobPosting(OWNER_ID, new JobPostingAttributes(
-                COMPANY_ID, "백엔드 개발", null, EmploymentType.FULL_TIME, deadline, status, null, List.of()));
+                COMPANY_ID, "백엔드 개발", null, EmploymentType.FULL_TIME, deadline, status, null, null, List.of()));
         created.onCreate();
         return created;
     }
@@ -58,7 +58,7 @@ class JobPostingServiceTest {
     private static JobPostingRequest request(UUID companyId, String companyName,
                                              List<PositionNameRequest> positions, List<StepRequest> steps) {
         return new JobPostingRequest(companyId, companyName, "2026 신입 공채", null,
-                EmploymentType.FULL_TIME, null, ApplicationStatus.INTERESTED, null, positions, steps);
+                EmploymentType.FULL_TIME, null, ApplicationStatus.INTERESTED, null, null, positions, steps);
     }
 
     /** 마감이 지난 관심·작성중 공고는 목록 조회 시점에 보관함으로 옮겨진다. */
@@ -119,7 +119,7 @@ class JobPostingServiceTest {
     @Test
     void stepsKeepOrderAndResultChangesBySeq() {
         JobPosting p = new JobPosting(OWNER_ID, new JobPostingAttributes(
-                COMPANY_ID, "공채", null, EmploymentType.FULL_TIME, null, ApplicationStatus.SUBMITTED, null,
+                COMPANY_ID, "공채", null, EmploymentType.FULL_TIME, null, ApplicationStatus.SUBMITTED, null, null,
                 List.of(new RecruitmentStep("서류", null, null, null),
                         new RecruitmentStep("인적성", null, null, null),
                         new RecruitmentStep("면접", null, null, null))));

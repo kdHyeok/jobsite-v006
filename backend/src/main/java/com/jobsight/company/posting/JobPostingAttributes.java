@@ -13,6 +13,7 @@ public record JobPostingAttributes(
         Instant deadlineAt,
         ApplicationStatus status,
         String qualifications,
+        String memo,
         List<RecruitmentStep> steps
 ) {
 }

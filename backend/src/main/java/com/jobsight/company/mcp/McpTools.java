@@ -8,6 +8,7 @@ import com.jobsight.company.position.PositionController;
 import com.jobsight.company.posting.JobPostingController;
 import com.jobsight.company.reference.ReferenceController;
 import com.jobsight.company.resume.ResumeController;
+import com.jobsight.company.selfintro.SelfIntroductionController;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Validator;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +33,8 @@ public class McpTools {
 
     public McpTools(CompanyController companies, JobPostingController postings, PositionController positions,
                     ReferenceController references, CompanyContentController contents, ResumeController resumes,
-                    AdminController admin, AuthController auth, McpActions actions, ObjectMapper mapper, Validator validator) {
+                    SelfIntroductionController selfIntroductions, AdminController admin, AuthController auth,
+                    McpActions actions, ObjectMapper mapper, Validator validator) {
         this.mapper = mapper; this.validator = validator;
         register("company_list", companies, "findAll", true, false);
         register("company_get", companies, "findById", true, false);
@@ -75,6 +77,11 @@ public class McpTools {
         register("resume_row_add", actions, "addResumeRow", false, false);
         register("resume_row_update", actions, "updateResumeRow", false, true);
         register("resume_row_delete", actions, "deleteResumeRow", false, true);
+        register("self_intro_list", selfIntroductions, "findAll", true, false);
+        register("self_intro_get", selfIntroductions, "findById", true, false);
+        register("self_intro_create", selfIntroductions, "create", false, false);
+        register("self_intro_update", selfIntroductions, "update", false, true);
+        register("self_intro_delete", selfIntroductions, "delete", false, true);
         register("account_get", actions, "me", true, false);
         register("account_update", auth, "updateMe", false, true);
         register("admin_users_list", admin, "findUsers", true, false);

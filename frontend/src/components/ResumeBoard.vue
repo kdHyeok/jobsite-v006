@@ -9,19 +9,22 @@ import {
   listResumes,
   updateResume,
 } from '../api/resumes'
+import { listPositions } from '../api/positions'
 import ConfirmDialog from './ConfirmDialog.vue'
 import ResumeEditor from './ResumeEditor.vue'
 import type { Resume, ResumePayload, ResumeSummary } from '../types/resume'
+import type { Position } from '../types/position'
 
 /**
  * /resumes 는 카드 목록, /resumes?focus=<id> 는 그 버전의 편집기.
  * 라우팅(URL)은 App 이 한다. 여기는 focus 를 받고 openResume/closeResume 를 올린다.
  */
 const props = defineProps<{ focus: string | null }>()
-const emit = defineEmits<{ openResume: [id: string]; closeResume: [] }>()
+const emit = defineEmits<{ openResume: [id: string]; closeResume: []; openIntroductions: [] }>()
 
 const resumes = ref<ResumeSummary[]>([])
 const current = ref<Resume | null>(null)
+const positions = ref<Position[]>([])
 const loading = ref(true)
 const loadError = ref('')
 const notice = ref('')
@@ -56,7 +59,9 @@ async function loadCurrent(id: string) {
   loading.value = true
   loadError.value = ''
   try {
-    current.value = await getResume(id)
+    const [resume, availablePositions] = await Promise.all([getResume(id), listPositions()])
+    current.value = resume
+    positions.value = availablePositions
   } catch (error) {
     current.value = null
     fail(error, '이력서를 불러오지 못했습니다.')
@@ -157,10 +162,12 @@ onMounted(reload)
       :resume="current"
       :saving="saving"
       :api-field-errors="formErrors"
+      :positions="positions"
       @save="save"
       @copy="copy"
       @remove="deleteTarget = current"
       @back="back"
+      @open-introductions="emit('openIntroductions')"
     />
   </template>
 

@@ -23,6 +23,8 @@ public record PositionRequest(
         String headcount,
         @Size(max = 160, message = "근무지역은 160자 이하여야 합니다.")
         String workLocation,
+        @Size(max = 5000, message = "메모는 5,000자 이하여야 합니다.")
+        String memo,
         @Size(max = 30, message = "기술 스택은 30개 이하여야 합니다.")
         List<@Size(max = 60, message = "기술 이름은 60자 이하여야 합니다.") String> techStack
 ) {

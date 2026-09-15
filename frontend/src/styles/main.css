@@ -46,8 +46,8 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: var(--radius); background: var(--primary); color: #fff; font-weight: 700; }
 .topbar-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 
-.segmented { display: flex; gap: 2px; padding: 3px; border-radius: var(--radius); background: var(--surface-sunken); }
-.segmented button { padding: 6px 18px; border-radius: 6px; color: var(--muted); font-weight: 500; }
+.segmented { display: flex; gap: 2px; max-width: 100%; overflow-x: auto; padding: 3px; border-radius: var(--radius); background: var(--surface-sunken); }
+.segmented button { flex: 0 0 auto; padding: 6px 18px; border-radius: 6px; color: var(--muted); font-weight: 500; white-space: nowrap; }
 .segmented button:hover { color: var(--text); }
 .segmented button.active { background: var(--surface); color: var(--primary); font-weight: 600; box-shadow: var(--shadow); }
 
@@ -394,6 +394,27 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
 .resume-row { margin-top: 10px; padding: 12px; background: var(--surface-sunken); border-radius: var(--radius); }
 .resume-row__bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .resume-row .field input, .resume-row .field textarea { background: var(--surface); }
+.position-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+.position-option { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.position-option:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.position-option input { flex: 0 0 auto; width: 16px; height: 16px; margin-top: 2px; }
+.position-option span { display: grid; min-width: 0; gap: 2px; }
+.position-option strong, .position-option small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.position-option small { color: var(--muted); }
+.question-add, .intro-search { display: flex; align-items: end; gap: 8px; }
+.question-add .field, .intro-search .field { flex: 1; margin: 0; }
+.question-list { display: grid; gap: 6px; margin: 12px 0 0; padding-left: 24px; }
+.intro-list { display: grid; gap: 12px; margin-top: 16px; }
+.intro-card { display: grid; gap: 10px; padding: 16px 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.intro-card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.intro-card h2 { font-size: 16px; line-height: 1.5; }
+.intro-card p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.search-highlight mark { padding: 0 2px; border-radius: 2px; background: var(--warning-soft); color: inherit; }
+
+@media (max-width: 720px) {
+  .position-picker { grid-template-columns: 1fr; }
+  .question-add, .intro-search { align-items: stretch; flex-direction: column; }
+}
 
 /* ── 기업 주요 사업 ─────────────────────────────────────────────── */
 .repeater__row--business { grid-template-columns: 24px minmax(0, 1fr) auto; row-gap: 6px; }

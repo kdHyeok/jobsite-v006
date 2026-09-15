@@ -3,6 +3,7 @@ import { computed, reactive, watch } from 'vue'
 import type { BusinessArea, Company, CompanyPayload, CompanySize, RevenueUnit } from '../types/company'
 import { companySizeLabels } from '../types/company'
 import BusinessAreas from './BusinessAreas.vue'
+import MarkdownTextarea from './MarkdownTextarea.vue'
 import TagInput from './TagInput.vue'
 
 const props = defineProps<{
@@ -181,7 +182,8 @@ const revenueUnits: Array<[RevenueUnit, string]> = [['TEN_THOUSAND', '만 원'],
       <p class="form-section">개인 기록</p>
       <label class="field full">
         <span>지원 메모</span>
-        <textarea v-model="form.memo" maxlength="5000" rows="4" placeholder="연결할 경험, 확인할 질문, 다음 행동" />
+        <MarkdownTextarea v-model="form.memo" maxlength="5000" rows="6" placeholder="연결할 경험, 확인할 질문, 다음 행동" />
+        <small># 제목 · - 목록 · 1. 번호 · Tab 들여쓰기 · URL 링크</small>
       </label>
     </div>
     <p class="form-hint">채용정보는 채용공고를 등록하면 자동으로 채워집니다.</p>

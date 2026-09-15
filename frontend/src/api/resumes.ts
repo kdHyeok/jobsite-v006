@@ -11,7 +11,7 @@ export const getResume = (id: string) => request<Resume>(API.resume(id))
 
 /** content 를 비우면 서버가 빈 문서로 만든다. */
 export const createResume = (name: string) =>
-  request<Resume>(API.resumes, { method: 'POST', body: JSON.stringify({ name, content: null }) })
+  request<Resume>(API.resumes, { method: 'POST', body: JSON.stringify({ name, content: null, positionIds: [] }) })
 
 /** 문서 통째 교체. 행 단위 API 는 없다. */
 export const updateResume = (id: string, payload: ResumePayload) =>

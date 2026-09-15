@@ -52,6 +52,7 @@ export interface Position {
   preferredSkills: string | null
   headcount: string | null
   workLocation: string | null
+  memo: string | null
   techStack: string[]
   references: ReferenceItem[]
   createdAt: string
@@ -70,5 +71,6 @@ export interface PositionPayload {
   preferredSkills: string
   headcount: string
   workLocation: string
+  memo: string
   techStack: string[]
 }

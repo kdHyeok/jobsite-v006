@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import type { Position, PositionPayload } from '../types/position'
+import MarkdownTextarea from './MarkdownTextarea.vue'
 import TagInput from './TagInput.vue'
 
 const props = defineProps<{
@@ -14,7 +15,7 @@ const emit = defineEmits<{ submit: [payload: PositionPayload] }>()
 
 const form = reactive<PositionPayload>({
   name: '', team: '', role: '', responsibilities: '', impact: '', growth: '', experience: '',
-  requiredSkills: '', preferredSkills: '', headcount: '', workLocation: '', techStack: [],
+  requiredSkills: '', preferredSkills: '', headcount: '', workLocation: '', memo: '', techStack: [],
 })
 const localErrors = reactive<Record<string, string>>({})
 
@@ -33,6 +34,7 @@ watch(
       preferredSkills: position.preferredSkills ?? '',
       headcount: position.headcount ?? '',
       workLocation: position.workLocation ?? '',
+      memo: position.memo ?? '',
       techStack: [...position.techStack],
     })
     Object.keys(localErrors).forEach((key) => delete localErrors[key])
@@ -113,6 +115,13 @@ function submit() {
       <label class="field full">
         <span>취득 경험</span>
         <textarea v-model="form.experience" rows="2" placeholder="이 직무로 얻는 경험" />
+      </label>
+
+      <p class="form-section">개인 기록</p>
+      <label class="field full">
+        <span>직무 메모</span>
+        <MarkdownTextarea v-model="form.memo" maxlength="5000" rows="6" placeholder="준비할 내용, 연결할 경험, 다음 행동" />
+        <small># 제목 · - 목록 · 1. 번호 · Tab 들여쓰기 · URL 링크</small>
       </label>
     </div>
   </form>

@@ -79,4 +79,14 @@ describe('CompanyContentAlbum', () => {
     expect(api.createCompanyContent).toHaveBeenCalledWith(companyId, expect.objectContaining({ kind: 'YOUTUBE', title: '기업 인터뷰' }))
     expect(wrapper.get('.content-card').text()).toContain('유튜브')
   })
+
+  it('자료 내용을 더블클릭하면 수정 폼을 연다', async () => {
+    const wrapper = mount(CompanyContentAlbum, { props: { companyId } })
+    await flushPromises()
+
+    await wrapper.get('.content-card__preview').trigger('dblclick')
+
+    expect(wrapper.get<HTMLInputElement>('#company-content-form input[maxlength="200"]').element.value)
+      .toBe(news.title)
+  })
 })

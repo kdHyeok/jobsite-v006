@@ -1,0 +1,2 @@
+ALTER TABLE job_postings ADD COLUMN memo TEXT;
+ALTER TABLE positions ADD COLUMN memo TEXT;

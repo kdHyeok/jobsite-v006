@@ -51,7 +51,7 @@ class JobPostingPersistenceIntegrationTest {
     void expiredInterestedPostingIsSelectedForAutoArchive() {
         JobPosting posting = repository.saveAndFlush(new JobPosting(OWNER_ID,
                 new JobPostingAttributes(COMPANY_ID, "지난 공고", null, EmploymentType.FULL_TIME,
-                        Instant.now().minus(1, ChronoUnit.DAYS), ApplicationStatus.INTERESTED, null, List.of())));
+                        Instant.now().minus(1, ChronoUnit.DAYS), ApplicationStatus.INTERESTED, null, null, List.of())));
 
         assertThat(repository.findPendingAutoArchive(OWNER_ID, Instant.now()))
                 .extracting(JobPosting::getId).contains(posting.getId());
@@ -63,7 +63,7 @@ class JobPostingPersistenceIntegrationTest {
 
     private static JobPostingAttributes attributesWithSteps(String... names) {
         return new JobPostingAttributes(COMPANY_ID, "공고", null, EmploymentType.FULL_TIME, null,
-                ApplicationStatus.INTERESTED, null,
+                ApplicationStatus.INTERESTED, null, null,
                 List.of(names).stream().map(name -> new RecruitmentStep(name, null, null, null)).toList());
     }
 }

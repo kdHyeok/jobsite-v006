@@ -178,7 +178,7 @@ onMounted(async () => {
       <button type="button" class="button secondary compact" @click="startEdit">수정</button>
       <button type="button" class="button danger compact" @click="deleteTarget = selected">삭제</button>
     </template>
-    <CompanyDetail :company="selected" @open-posting="emit('openPosting', $event)" />
+    <CompanyDetail :company="selected" @edit="startEdit" @open-posting="emit('openPosting', $event)" />
   </Drawer>
 
   <Drawer

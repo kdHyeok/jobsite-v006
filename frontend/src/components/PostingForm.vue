@@ -3,6 +3,7 @@ import { reactive, watch } from 'vue'
 import type { Company } from '../types/company'
 import type { ApplicationStatus, EmploymentType, JobPosting, JobPostingPayload, StepResult } from '../types/posting'
 import { employmentTypeLabels, nowLocalInput, selectableStatuses, statusLabels, toLocalInput, toUtcIso } from '../types/posting'
+import MarkdownTextarea from './MarkdownTextarea.vue'
 
 const props = defineProps<{
   posting: JobPosting | null
@@ -28,6 +29,7 @@ interface FormState {
   deadlineLocal: string
   status: ApplicationStatus
   qualifications: string
+  memo: string
   positions: PositionRow[]
   steps: StepRow[]
 }
@@ -35,7 +37,7 @@ interface FormState {
 const emptyForm = (): FormState => ({
   companyId: null, companyName: '', title: '', postingUrl: '',
   employmentType: 'FULL_TIME', deadlineLocal: nowLocalInput(), status: 'INTERESTED', qualifications: '',
-  positions: [], steps: [],
+  memo: '', positions: [], steps: [],
 })
 
 const form = reactive<FormState>(emptyForm())
@@ -54,6 +56,7 @@ watch(
           deadlineLocal: toLocalInput(posting.deadlineAt),
           status: posting.status,
           qualifications: posting.qualifications ?? '',
+          memo: posting.memo ?? '',
           positions: posting.positions.map((p) => ({ id: p.id, name: p.name })),
           steps: posting.steps.map((s) => ({
             name: s.name, result: s.result, scheduledLocal: toLocalInput(s.scheduledAt), memo: s.memo ?? '',
@@ -110,6 +113,7 @@ function submit() {
     deadlineAt: toUtcIso(form.deadlineLocal),
     status: form.status,
     qualifications: form.qualifications,
+    memo: form.memo,
     // 빈 이름은 버린다. 다 비면 서버가 제목 이름의 직무 하나를 만든다.
     positions: form.positions
       .filter((p) => p.name.trim())
@@ -204,6 +208,13 @@ const statuses = selectableStatuses.map((status) => [status, statusLabels[status
       <label class="field full">
         <span>지원자격</span>
         <textarea v-model="form.qualifications" rows="3" placeholder="학력, 경력, 필수 조건" />
+      </label>
+
+      <p class="form-section">개인 기록</p>
+      <label class="field full">
+        <span>공고 메모</span>
+        <MarkdownTextarea v-model="form.memo" maxlength="5000" rows="6" placeholder="확인할 내용, 지원 전략, 다음 행동" />
+        <small># 제목 · - 목록 · 1. 번호 · Tab 들여쓰기 · URL 링크</small>
       </label>
     </div>
   </form>

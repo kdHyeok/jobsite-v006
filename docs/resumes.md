@@ -4,12 +4,14 @@
 
 이력서를 **여러 버전**으로 두고(이름 + id 로 구분), 버전마다 섹션 행을 자유롭게 추가·삭제·순서 변경한다.
 섹션 구성은 사용자가 쓰던 이력서 양식을 그대로 옮겼다 — 기본정보 · 학력 · 교육이수 · 대내외활동 · 경력 · 수상 · 자격증 · SW 역량 · 프로젝트.
+각 이력서는 여러 모집 직무를 연결할 수 있고 자기소개 질문은 별도 데이터로 관리한다 — [self-introductions.md](self-introductions.md).
 
 ## 도메인
 
 ```
 app_users ──1:N──▶ resumes
                      id · owner_id · name(이력서 명) · content JSONB · created_at · updated_at
+                     └─N:M─ positions via resume_positions
 
 content = {
   basic:        { name, phone, birthDate, email, address, portfolioUrl, githubUrl }
@@ -42,13 +44,14 @@ content = {
 3. **REST 저장은 문서 통째 PUT.** REST 에 행 단위 API 는 없다. 화면은 행 추가·삭제·이동을 로컬에서 하고 `저장` 을 눌러야 DB 에 간다(저장 안 한 변경은 `변경됨` 표시 + 이탈 경고). **MCP 만** 행 도구를 갖는다 — 서버가 조회→수정→저장을 한 트랜잭션으로 묶는 편의 계층이지, 두 번째 저장 경로가 아니다.
 4. **빈 값은 항상 같은 모양.** `content` 가 없으면 `ResumeContent.empty()`, 섹션이 `null` 이면 `[]` 로 정규화해 저장한다. 읽는 쪽이 `null` 검사를 안 하게.
 5. **복제는 새 id.** `POST /resumes/{id}/copy` 는 content 를 그대로 든 새 행을 만든다. 원본은 건드리지 않는다.
+6. **연결 직무는 관계로 저장한다.** `positionIds`는 같은 소유자의 직무만 허용하고 이력서 복제에도 복사한다.
 
 ## 진입점
 
 | 무엇 | 어디 |
 |---|---|
 | 스키마 | `V14__resumes.sql` |
-| 도메인 | `resume/Resume`(엔티티, `content` 는 `@JdbcTypeCode(SqlTypes.JSON)` String) · `ResumeContent`(record + 검증) · `ResumeService` · `ResumeController` — `ApiPaths.RESUMES` |
+| 도메인 | `resume/Resume`(엔티티, `content` 는 `@JdbcTypeCode(SqlTypes.JSON)` String, `positionIds`는 관계) · `ResumeContent`(record + 검증) · `ResumeService` · `ResumeController` — `ApiPaths.RESUMES` |
 | JSON 변환 | `ResumeService.write()/read()` — Boot 4 의 Jackson 3 `tools.jackson.databind.ObjectMapper` |
 | 화면 | `ResumeBoard.vue`(`/resumes` 목록 카드, `?focus=<id>` 면 편집기) · `ResumeEditor.vue`(전체 페이지 편집기) · `ResumeSection.vue`(섹션 하나 = 행 카드 + ↑↓× + 행 추가) |
 | 섹션 정의 | `frontend/src/types/resume.ts` 의 `SECTIONS` — 라벨·필드·입력 종류. 섹션을 더하려면 **여기와 `ResumeContent`, `ResumeSection` enum 세 곳** |
@@ -58,9 +61,9 @@ content = {
 
 ```
 GET    /api/resumes            → [ {id, name, updatedAt} ]      목록엔 content 없음
-POST   /api/resumes            {name, content?}                  content 없으면 빈 문서
-GET    /api/resumes/{id}       → {id, name, content, createdAt, updatedAt}
-PUT    /api/resumes/{id}       {name, content}                   통째 교체
+POST   /api/resumes            {name, content?, positionIds?}    content 없으면 빈 문서
+GET    /api/resumes/{id}       → {id, name, content, positionIds, createdAt, updatedAt}
+PUT    /api/resumes/{id}       {name, content, positionIds}      통째 교체
 POST   /api/resumes/{id}/copy  {name}                            새 버전
 DELETE /api/resumes/{id}
 
@@ -86,6 +89,8 @@ cd frontend && npm run type-check && npm test
 3. 이름을 바꾸고 저장 안 한 채 `← 목록` → 이탈 확인이 뜨는가
 4. `복제` → 같은 내용의 새 카드가 생기고 원본은 그대로인가
 5. 목록 카드에 이름·최근 수정만 보이는가
+6. 편집기에서 여러 모집 직무를 선택해 저장하고 다시 열어도 연결이 유지되는가
+7. 이력서 목록 카드를 더블클릭하면 해당 이력서 편집기가 열리는가
 
 ## 함정
 

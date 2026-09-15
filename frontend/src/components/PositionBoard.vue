@@ -278,6 +278,7 @@ onMounted(async () => {
       :all-references="references"
       :all-positions="positions"
       :busy="saving"
+      @edit="formErrors = {}; mode = 'edit'"
       @attach="attach"
       @detach="detach"
       @create="createAndAttach"

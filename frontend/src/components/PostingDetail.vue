@@ -8,6 +8,8 @@ import {
   statusLabels,
   stepResultLabels,
 } from '../types/posting'
+import MarkdownMemo from './MarkdownMemo.vue'
+import { opensEditor } from '../utils/doubleClick'
 
 // 수정·보관·삭제는 드로어 헤더가 가진다. 여기서 바로 바꾸는 건 내 상태와 절차 결과 — 가장 잦은 조작.
 defineProps<{ posting: JobPosting }>()
@@ -18,14 +20,19 @@ const emit = defineEmits<{
   openPosition: [positionId: string]
   /** 역방향 — 이 공고를 낸 기업으로 건너뛴다. */
   openCompany: [companyId: string]
+  edit: []
 }>()
+
+function editFromDoubleClick(event: MouseEvent) {
+  if (opensEditor(event)) emit('edit')
+}
 
 const formatDate = (value: string | null) =>
   value ? new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value)) : ''
 </script>
 
 <template>
-  <div>
+  <div title="더블클릭해 채용공고 수정" @dblclick="editFromDoubleClick">
     <section class="detail-section">
       <label class="field">
         <span>내 상태</span>
@@ -117,6 +124,11 @@ const formatDate = (value: string | null) =>
       <p class="body-copy" :class="{ empty: !posting.qualifications }">
         {{ posting.qualifications || '미입력' }}
       </p>
+    </section>
+
+    <section class="detail-section">
+      <p class="label">공고 메모</p>
+      <MarkdownMemo :source="posting.memo" empty="아직 공고 메모가 없습니다." />
     </section>
   </div>
 </template>

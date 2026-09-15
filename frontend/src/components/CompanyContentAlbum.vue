@@ -9,6 +9,7 @@ import {
 } from '../api/company-contents'
 import type { CompanyContent, CompanyContentPayload } from '../types/company-content'
 import { companyContentKindLabels } from '../types/company-content'
+import { opensEditor } from '../utils/doubleClick'
 import CompanyContentForm from './CompanyContentForm.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 
@@ -41,6 +42,10 @@ function openForm(content: CompanyContent | null = null) {
   editing.value = content
   fieldErrors.value = {}
   formOpen.value = true
+}
+
+function editFromDoubleClick(event: MouseEvent, content: CompanyContent) {
+  if (opensEditor(event)) openForm(content)
 }
 
 function closeForm() {
@@ -117,7 +122,13 @@ onMounted(load)
     <p v-if="loading" class="body-copy empty" aria-live="polite">자료를 불러오는 중입니다.</p>
     <p v-else-if="contents.length === 0 && !formOpen" class="body-copy empty">저장한 뉴스나 유튜브가 없습니다.</p>
     <div v-else class="content-grid">
-      <article v-for="content in contents" :key="content.id" class="content-card">
+      <article
+        v-for="content in contents"
+        :key="content.id"
+        class="content-card"
+        title="더블클릭해 자료 수정"
+        @dblclick="editFromDoubleClick($event, content)"
+      >
         <div class="content-card__head">
           <span class="chip" :data-tone="content.kind === 'YOUTUBE' ? 'negative' : 'primary'">
             {{ companyContentKindLabels[content.kind] }}

@@ -37,6 +37,7 @@ const posting: JobPosting = {
   deadlineAt: '2099-09-10T09:00:00Z',
   status: 'INTERESTED',
   qualifications: null,
+  memo: null,
   targetPositionId: null,
   steps: [],
   positions: [{ id: '40000000-0000-0000-0000-000000000001', name: '백엔드 엔지니어', team: null, headcount: null, workLocation: null }],
@@ -137,6 +138,7 @@ describe('CompanyWorkspace', () => {
     await row.trigger('dblclick')
 
     expect(wrapper.emitted('openPosting')?.[0]).toEqual([posting.id])
+    expect(wrapper.find('#company-form').exists()).toBe(false)
   })
 
   it('드로어에서 수정을 누르면 같은 자리에서 폼으로 바뀐다', async () => {
@@ -151,6 +153,17 @@ describe('CompanyWorkspace', () => {
     expect(wrapper.findAll('.drawer')).toHaveLength(1)
     expect(wrapper.get<HTMLInputElement>('#company-form input').element.value)
       .toBe('루멘 로보틱스 데모')
+  })
+
+  it('기업 상세 값을 더블클릭하면 같은 수정 폼을 연다', async () => {
+    const wrapper = mount(CompanyWorkspace)
+    await flushPromises()
+    await wrapper.get('.card').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('.drawer .body-copy').trigger('dblclick')
+
+    expect(wrapper.find('#company-form').exists()).toBe(true)
   })
 
   it('기업 수정 저장이 API 호출과 상세 복귀까지 이어진다', async () => {

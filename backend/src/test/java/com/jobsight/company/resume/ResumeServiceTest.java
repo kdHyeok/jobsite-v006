@@ -3,6 +3,8 @@ package com.jobsight.company.resume;
 import com.jobsight.company.auth.CurrentUser;
 import com.jobsight.company.common.ApiRuleException;
 import com.jobsight.company.common.ResourceNotFoundException;
+import com.jobsight.company.position.Position;
+import com.jobsight.company.position.PositionRepository;
 import com.jobsight.company.resume.dto.ResumeCopyRequest;
 import com.jobsight.company.resume.dto.ResumeRequest;
 import com.jobsight.company.resume.dto.ResumeResponse;
@@ -19,12 +21,14 @@ import tools.jackson.databind.json.JsonMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,13 +37,15 @@ class ResumeServiceTest {
 
     @Mock private ResumeRepository repository;
     @Mock private CurrentUser currentUser;
+    @Mock private PositionRepository positionRepository;
 
     private final JsonMapper mapper = JsonMapper.builder().build();
     private ResumeService service;
 
     @BeforeEach
     void setUp() {
-        service = new ResumeService(repository, currentUser, mapper, Validation.buildDefaultValidatorFactory().getValidator());
+        service = new ResumeService(repository, currentUser, mapper,
+                Validation.buildDefaultValidatorFactory().getValidator(), positionRepository);
         given(currentUser.id()).willReturn(OWNER_ID);
     }
 
@@ -60,7 +66,7 @@ class ResumeServiceTest {
     void createWithoutContentStoresEmptyDocument() {
         saveReturnsArgument();
 
-        ResumeResponse created = service.create(new ResumeRequest("  새 이력서 ", null));
+        ResumeResponse created = service.create(new ResumeRequest("  새 이력서 ", null, List.of()));
 
         ArgumentCaptor<Resume> saved = ArgumentCaptor.forClass(Resume.class);
         verify(repository).save(saved.capture());
@@ -81,7 +87,7 @@ class ResumeServiceTest {
                         List.of(new ResumeContent.CollegeTerm("1학년", "일반화학(A+)", "24.00", "4.38")), null)),
                 null, null, null, null, null, null, null);
 
-        ResumeResponse created = service.create(new ResumeRequest("v1", content));
+        ResumeResponse created = service.create(new ResumeRequest("v1", content, List.of()));
 
         assertThat(created.content().educations()).hasSize(1);
         assertThat(created.content().educations().get(0).endYm()).isEqualTo("현재");
@@ -96,6 +102,8 @@ class ResumeServiceTest {
         saveReturnsArgument();
         Resume source = new Resume(OWNER_ID, "v1", "{\"basic\":{\"name\":\"테스트\"},\"educations\":[]}");
         source.onCreate();
+        UUID positionId = UUID.randomUUID();
+        source.replacePositions(Set.of(positionId));
         given(repository.findByIdAndOwnerId(source.getId(), OWNER_ID)).willReturn(Optional.of(source));
 
         ResumeResponse copy = service.copy(source.getId(), new ResumeCopyRequest("v2"));
@@ -103,7 +111,29 @@ class ResumeServiceTest {
         assertThat(copy.id()).isNotEqualTo(source.getId());
         assertThat(copy.name()).isEqualTo("v2");
         assertThat(copy.content().basic().name()).isEqualTo("테스트");
+        assertThat(copy.positionIds()).containsExactly(positionId);
         assertThat(source.getName()).isEqualTo("v1");
+    }
+
+    @Test
+    void linkedPositionsMustBelongToOwner() {
+        saveReturnsArgument();
+        UUID positionId = UUID.randomUUID();
+        UUID secondPositionId = UUID.randomUUID();
+        Position position = mock(Position.class);
+        Position secondPosition = mock(Position.class);
+        given(position.getId()).willReturn(positionId);
+        given(secondPosition.getId()).willReturn(secondPositionId);
+        given(positionRepository.findAllByIdInAndOwnerId(Set.of(positionId, secondPositionId), OWNER_ID))
+                .willReturn(List.of(position, secondPosition));
+
+        ResumeResponse created = service.create(new ResumeRequest("지원용", null,
+                List.of(positionId, secondPositionId)));
+
+        assertThat(created.positionIds()).containsExactly(positionId, secondPositionId);
+        UUID unknown = UUID.randomUUID();
+        assertThatThrownBy(() -> service.create(new ResumeRequest("다른 직무", null, List.of(unknown))))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     /** 행 도구: 그 섹션 필드만 받고, 다른 섹션 필드·범위 밖 index 는 거부한다. 나머지 섹션은 그대로. */

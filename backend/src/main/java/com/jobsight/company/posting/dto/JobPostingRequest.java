@@ -43,6 +43,9 @@ public record JobPostingRequest(
         @Size(max = 5000, message = "지원자격은 5,000자 이하여야 합니다.")
         String qualifications,
 
+        @Size(max = 5000, message = "메모는 5,000자 이하여야 합니다.")
+        String memo,
+
         /** 비우면 title 과 같은 이름의 직무 하나를 만든다. */
         @Size(max = 30, message = "직무는 30개 이하여야 합니다.")
         List<@Valid PositionNameRequest> positions,

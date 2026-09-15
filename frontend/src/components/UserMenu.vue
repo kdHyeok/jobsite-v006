@@ -29,7 +29,7 @@ async function save() {
     emit('updated', await updateMyName(name.value))
     open.value = false
   } catch (error) {
-    errorMessage.value = error instanceof ApiClientError ? error.message : '이름을 저장하지 못했습니다.'
+    errorMessage.value = error instanceof ApiClientError ? error.message : '닉네임을 저장하지 못했습니다.'
   } finally {
     saving.value = false
   }
@@ -67,15 +67,15 @@ onUnmounted(() => {
 
     <section v-if="open" class="popover" role="dialog" aria-label="내 계정">
       <div class="popover__head">
-        <strong>{{ me.displayName || '이름 없음' }}</strong>
+        <strong>{{ me.displayName || '닉네임 없음' }}</strong>
         <span v-if="me.role" class="chip">{{ roleLabels[me.role] }}</span>
       </div>
       <p class="popover__email">{{ me.email }}</p>
 
       <form class="popover__form" @submit.prevent="save">
         <label class="field full">
-          <span>표시 이름</span>
-          <input v-model="name" maxlength="80" placeholder="비우면 이름을 지웁니다" :disabled="saving" />
+          <span>닉네임</span>
+          <input v-model="name" maxlength="80" placeholder="비우면 닉네임을 지웁니다" :disabled="saving" />
           <span v-if="errorMessage" class="field-error">{{ errorMessage }}</span>
         </label>
         <div class="popover__actions">

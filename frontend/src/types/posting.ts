@@ -44,6 +44,7 @@ export interface JobPosting {
   deadlineAt: string | null
   status: ApplicationStatus
   qualifications: string | null
+  memo: string | null
   targetPositionId: string | null
   steps: RecruitmentStep[]
   positions: PositionSummary[]
@@ -62,6 +63,7 @@ export interface JobPostingPayload {
   deadlineAt: string | null
   status: ApplicationStatus
   qualifications: string
+  memo: string
   /** id 가 있으면 이름 갱신, 없으면 생성. 빠진 기존 직무는 삭제된다. 비우면 제목 이름의 직무 하나. */
   positions: Array<{ id: string | null; name: string }>
   steps: StepPayload[]

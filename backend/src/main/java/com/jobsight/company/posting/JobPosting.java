@@ -56,6 +56,9 @@ public class JobPosting {
     @Column(columnDefinition = "TEXT")
     private String qualifications;
 
+    @Column(columnDefinition = "TEXT")
+    private String memo;
+
     /** 공채에서 내가 실제로 지원한 직무. 선택. */
     @Column(name = "target_position_id")
     private UUID targetPositionId;
@@ -102,6 +105,7 @@ public class JobPosting {
         this.deadlineAt = attributes.deadlineAt();
         this.status = attributes.status();
         this.qualifications = attributes.qualifications();
+        this.memo = attributes.memo();
         replaceSteps(attributes.steps());
     }
 
@@ -182,6 +186,7 @@ public class JobPosting {
     public Instant getDeadlineAt() { return deadlineAt; }
     public ApplicationStatus getStatus() { return status; }
     public String getQualifications() { return qualifications; }
+    public String getMemo() { return memo; }
     public UUID getTargetPositionId() { return targetPositionId; }
     public List<RecruitmentStep> getSteps() { return steps; }
     public Instant getArchivedAt() { return archivedAt; }

@@ -92,6 +92,13 @@ vi.mock('../api/resumes', () => {
   }
 })
 
+vi.mock('../api/self-introductions', () => ({
+  listSelfIntroductions: vi.fn(() => Promise.resolve([])),
+  createSelfIntroduction: vi.fn(),
+  updateSelfIntroduction: vi.fn(),
+  deleteSelfIntroduction: vi.fn(),
+}))
+
 vi.mock('../api/admin', () => ({
   listUsers: vi.fn(() => Promise.resolve([])),
   fetchSettings: vi.fn(() =>
@@ -182,9 +189,9 @@ describe('App 접근 제어', () => {
     await flushPromises()
 
     expect(wrapper.find('.auth-card').exists()).toBe(false)
-    // 홈은 채용공고. 세그먼트 순서: 채용공고 → 모집 직무 → 기업
+    // 홈은 채용공고. 상단에서 일반 작업 화면을 전환한다.
     expect(wrapper.find('.page-head').text()).toContain('채용공고')
-    expect(wrapper.findAll('.segmented button').map((b) => b.text())).toEqual(['채용공고', '모집 직무', '기업', '이력서'])
+    expect(wrapper.findAll('.segmented button').map((b) => b.text())).toEqual(['채용공고', '모집 직무', '기업', '이력서', '자기소개'])
     // 아바타는 이름 첫 글자, 툴팁은 이메일
     const avatar = wrapper.get('.avatar')
     expect(avatar.text()).toBe('홍')
@@ -202,6 +209,7 @@ describe('App 접근 제어', () => {
     await wrapper.get('.avatar').trigger('click')
     expect(wrapper.find('.popover').exists()).toBe(true)
     expect(wrapper.find('.popover').text()).toContain('member@example.com')
+    expect(wrapper.find('.popover').text()).toContain('닉네임')
 
     await wrapper.get('.popover input').setValue('김철수')
     await wrapper.get('.popover form').trigger('submit')

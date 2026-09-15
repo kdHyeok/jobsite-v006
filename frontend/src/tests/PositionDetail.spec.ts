@@ -34,6 +34,7 @@ const position: Position = {
   preferredSkills: null,
   headcount: null,
   workLocation: null,
+  memo: null,
   techStack: [],
   references: [reference],
   createdAt: '2026-09-01T00:00:00Z',
@@ -57,6 +58,18 @@ describe('PositionDetail 참고 정보', () => {
 
     expect(wrapper.findAll('.strip-card__tools button').map((b) => b.text()))
       .toEqual(['수정', '떼기', '삭제'])
+  })
+
+  it('직무 값과 참고 정보는 각각 더블클릭한 편집기를 연다', async () => {
+    const wrapper = mountDetail()
+
+    await wrapper.get('.detail-facts dd').trigger('dblclick')
+    expect(wrapper.emitted('edit')).toHaveLength(1)
+
+    await wrapper.get('.strip-card > strong').trigger('dblclick')
+    expect(wrapper.get<HTMLInputElement>('.picker input[maxlength="200"]').element.value)
+      .toBe(reference.title)
+    expect(wrapper.emitted('edit')).toHaveLength(1)
   })
 
   /** 수정은 만들기와 같은 폼을 쓰고, 저장하면 id 와 함께 update 를 올린다. */

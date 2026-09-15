@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import type { Position, ReferenceItem, ReferenceKind, ReferencePayload } from '../types/position'
 import { referenceKindLabels } from '../types/position'
 import { ddayLabel, ddayTone, formatDeadlineParts, statusLabels } from '../types/posting'
+import MarkdownMemo from './MarkdownMemo.vue'
+import { opensEditor } from '../utils/doubleClick'
 
 /**
  * 직무 상세 + 참고 정보 스트립. 추가는 "기존에서 검색" 또는 "새로 만들기".
@@ -27,6 +29,7 @@ const emit = defineEmits<{
   openPosition: [positionId: string]
   /** 역방향 — 이 직무가 속한 채용공고로 건너뛴다. */
   openPosting: [postingId: string]
+  edit: []
 }>()
 
 /** 만들기와 수정이 같은 폼을 쓴다. editingId 가 있으면 수정. */
@@ -66,6 +69,14 @@ function openEdit(item: ReferenceItem) {
   picker.value = 'form'
 }
 
+function editPositionFromDoubleClick(event: MouseEvent) {
+  if (opensEditor(event)) emit('edit')
+}
+
+function editReferenceFromDoubleClick(event: MouseEvent, item: ReferenceItem) {
+  if (opensEditor(event)) openEdit(item)
+}
+
 function onRelatedChange(id: string) {
   draft.value.relatedPositionId = id || null
   const target = otherPositions.value.find((p) => p.id === id)
@@ -94,7 +105,7 @@ const sections: Array<[keyof Position, string]> = [
 </script>
 
 <template>
-  <div>
+  <div title="더블클릭해 모집 직무 수정" @dblclick="editPositionFromDoubleClick">
     <section class="detail-section detail-chips">
       <span class="dday" :data-tone="ddayTone(position.deadlineAt)">{{ ddayLabel(position.deadlineAt) }}</span>
       <span v-if="position.status" class="chip" data-tone="primary">{{ statusLabels[position.status] }}</span>
@@ -187,7 +198,13 @@ const sections: Array<[keyof Position, string]> = [
 
       <p v-if="position.references.length === 0 && picker === 'closed'" class="body-copy empty">아직 붙인 참고 정보가 없습니다.</p>
       <div v-else-if="position.references.length" class="strip">
-        <article v-for="item in position.references" :key="item.id" class="strip-card">
+        <article
+          v-for="item in position.references"
+          :key="item.id"
+          class="strip-card"
+          title="더블클릭해 참고 정보 수정"
+          @dblclick.stop="editReferenceFromDoubleClick($event, item)"
+        >
           <span class="chip">{{ referenceKindLabels[item.kind] }}</span>
           <strong>{{ item.title }}</strong>
           <p v-if="item.memo" class="strip-card__memo">{{ item.memo }}</p>
@@ -215,6 +232,11 @@ const sections: Array<[keyof Position, string]> = [
     <section v-for="[key, label] in sections" :key="key" class="detail-section">
       <p class="label">{{ label }}</p>
       <p class="body-copy" :class="{ empty: !position[key] }">{{ position[key] || '미입력' }}</p>
+    </section>
+
+    <section class="detail-section">
+      <p class="label">직무 메모</p>
+      <MarkdownMemo :source="position.memo" empty="아직 직무 메모가 없습니다." />
     </section>
   </div>
 </template>

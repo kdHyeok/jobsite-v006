@@ -65,6 +65,9 @@ public class Position {
     @Column(name = "work_location", length = 160)
     private String workLocation;
 
+    @Column(columnDefinition = "TEXT")
+    private String memo;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "position_tech_stack", joinColumns = @JoinColumn(name = "position_id"))
     @Column(name = "tech", length = 60, nullable = false)
@@ -109,6 +112,7 @@ public class Position {
         this.preferredSkills = attributes.preferredSkills();
         this.headcount = attributes.headcount();
         this.workLocation = attributes.workLocation();
+        this.memo = attributes.memo();
         this.techStack = new LinkedHashSet<>(attributes.techStack());
         this.updatedAt = Instant.now();
     }
@@ -151,6 +155,7 @@ public class Position {
     public String getPreferredSkills() { return preferredSkills; }
     public String getHeadcount() { return headcount; }
     public String getWorkLocation() { return workLocation; }
+    public String getMemo() { return memo; }
     public Set<String> getTechStack() { return techStack; }
     public Set<UUID> getReferenceIds() { return referenceIds; }
     public Instant getCreatedAt() { return createdAt; }

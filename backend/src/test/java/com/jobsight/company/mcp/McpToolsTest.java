@@ -10,6 +10,7 @@ import com.jobsight.company.position.*;
 import com.jobsight.company.posting.*;
 import com.jobsight.company.reference.*;
 import com.jobsight.company.resume.*;
+import com.jobsight.company.selfintro.*;
 import com.jobsight.company.setting.AppSettingService;
 import com.jobsight.company.user.AppUserService;
 import jakarta.validation.Validation;
@@ -29,6 +30,7 @@ class McpToolsTest {
     ReferenceService references = mock(ReferenceService.class);
     CompanyContentService contents = mock(CompanyContentService.class);
     ResumeService resumes = mock(ResumeService.class);
+    SelfIntroductionService selfIntroductions = mock(SelfIntroductionService.class);
     AppUserService users = mock(AppUserService.class);
     AppSettingService settings = mock(AppSettingService.class);
     AdminStatsService stats = mock(AdminStatsService.class);
@@ -40,7 +42,8 @@ class McpToolsTest {
         var validator = Validation.buildDefaultValidatorFactory().getValidator();
         tools = new McpTools(new CompanyController(companies), new JobPostingController(postings),
                 new PositionController(positions), new ReferenceController(references), new CompanyContentController(contents),
-                new ResumeController(resumes), new AdminController(users, settings, stats, current), new AuthController(users, settings, current, null),
+                new ResumeController(resumes), new SelfIntroductionController(selfIntroductions),
+                new AdminController(users, settings, stats, current), new AuthController(users, settings, current, null, null),
                 new McpActions(current, users, positions, references, contents, resumes), JsonMapper.builder().findAndAddModules().build(), validator);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null,
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))));
@@ -48,7 +51,7 @@ class McpToolsTest {
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }
 
     @Test void catalogScopesAndAdministratorRoleAreEnforced() {
-        assertThat(tools.list(principal)).hasSize(41);
+        assertThat(tools.list(principal)).hasSize(46);
         assertThat(tools.list(new McpPrincipal(principal.userId(), Set.of(McpOAuthConfig.READ))))
                 .allSatisfy(tool -> assertThat(((Map<?, ?>) tool.get("annotations")).get("readOnlyHint")).isEqualTo(true));
         assertThatThrownBy(() -> tools.call("admin_users_list", Map.of(), principal))

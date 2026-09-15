@@ -1,10 +1,13 @@
-import { request } from './http'
+import { refreshSession, request } from './http'
 import { API } from '../routes'
 import type { LoginOptions, Me } from '../types/auth'
 
 export { ApiClientError } from './http'
 
-export const fetchMe = () => request<Me>(API.me)
+export const fetchMe = async () => {
+  const me = await request<Me>(API.me)
+  return !me.authenticated && await refreshSession() ? request<Me>(API.me) : me
+}
 
 export const fetchLoginOptions = () => request<LoginOptions>(API.loginOptions)
 

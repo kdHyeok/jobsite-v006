@@ -24,9 +24,11 @@ PostgreSQL + Spring Boot 4.1(Java 21) + Vue 3(TypeScript) + nginx, Docker Compos
 | 처음 실행, 환경 문제 | [docs/local-dev.md](docs/local-dev.md) |
 | `backend/**` | [docs/backend.md](docs/backend.md) — 버전 함정 포함 |
 | `frontend/src/**` | [docs/frontend.md](docs/frontend.md) |
+| 로그인 세션·리프레시 토큰 | [docs/auth-session.md](docs/auth-session.md) |
 | 기업 정보·채용공고 도메인 | [docs/job-postings.md](docs/job-postings.md) |
 | 기업 뉴스·유튜브 자료 | [docs/company-content.md](docs/company-content.md) |
 | 이력서(버전·섹션 JSON) | [docs/resumes.md](docs/resumes.md) |
+| 이력서 연결 직무·자기소개 문항 | [docs/self-introductions.md](docs/self-introductions.md) |
 | 이력서 증빙 파일 첨부 | [docs/attachments.md](docs/attachments.md) |
 | 관리자 콘솔·계정별 등록 수 | [docs/admin.md](docs/admin.md) |
 | 관리자 요청·피드백 | [docs/requests.md](docs/requests.md) |

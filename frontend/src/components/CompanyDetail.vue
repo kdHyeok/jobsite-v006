@@ -4,14 +4,20 @@ import type { Company } from '../types/company'
 import { companySizeLabels, formatFoundedOn, formatRevenue } from '../types/company'
 import { ddayLabel, ddayTone, statusLabels } from '../types/posting'
 import CompanyContentAlbum from './CompanyContentAlbum.vue'
+import MarkdownMemo from './MarkdownMemo.vue'
+import { opensEditor } from '../utils/doubleClick'
 
 // 수정·삭제 버튼은 드로어 헤더가 가진다. 여기는 읽기 전용 본문.
 defineProps<{ company: Company }>()
 
 /** 채용정보 행을 더블클릭하면 채용공고 화면에서 그 공고를 연다. */
-const emit = defineEmits<{ openPosting: [postingId: string] }>()
+const emit = defineEmits<{ edit: []; openPosting: [postingId: string] }>()
 
 const tab = ref<'profile' | 'content'>('profile')
+
+function editFromDoubleClick(event: MouseEvent) {
+  if (opensEditor(event)) emit('edit')
+}
 </script>
 
 <template>
@@ -22,7 +28,7 @@ const tab = ref<'profile' | 'content'>('profile')
 
   <CompanyContentAlbum v-if="tab === 'content'" :company-id="company.id" />
 
-  <div v-else>
+  <div v-else title="더블클릭해 기업 정보 수정" @dblclick="editFromDoubleClick">
     <section v-if="company.industries.length || company.companySize" class="detail-section detail-chips">
       <span v-if="company.companySize" class="chip" data-tone="primary">
         {{ companySizeLabels[company.companySize] }}
@@ -108,9 +114,7 @@ const tab = ref<'profile' | 'content'>('profile')
 
     <section class="detail-section">
       <p class="label">지원 메모</p>
-      <p class="body-copy" :class="{ empty: !company.memo }">
-        {{ company.memo || '아직 개인 메모가 없습니다.' }}
-      </p>
+      <MarkdownMemo :source="company.memo" empty="아직 개인 메모가 없습니다." />
     </section>
   </div>
 </template>

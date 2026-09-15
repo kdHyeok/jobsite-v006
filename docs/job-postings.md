@@ -12,11 +12,11 @@ app_users
  └─1:N─ companies                    unique(owner_id, lower(replace(name,' ','')))
          └─1:N─ job_postings         company_id NOT NULL
                  │  title(모집 부문) · posting_url · employment_type · deadline_at
-                 │  status(내 상태) · qualifications · target_position_id? · archived_at
+                 │  status(내 상태) · qualifications · memo · target_position_id? · archived_at
                  ├─1:N─ recruitment_steps   seq · name · result · scheduled_at · memo
                  └─1:N─ positions (모집 직무)  ≥ 1 보장
                          │  name · team · role · responsibilities · impact · growth
-                         │  experience · required_skills · preferred_skills · headcount · work_location
+                         │  experience · required_skills · preferred_skills · headcount · work_location · memo
                          ├─ position_tech_stack   (ElementCollection)
                          └─N:M─ reference_items  via position_references
                                   kind · title · url · memo · related_position_id?
@@ -42,6 +42,7 @@ app_users
 | 담당업무, 요구/우대 역량, 기술 스택, 인원, 근무지, 팀, 역할, 영향력, 성장, 경험 | 직무 | 공채는 직무마다 다르다 |
 | 절차 | 공고 | 결정 2 — 직무별 차이는 단계 이름에 적는다("코딩테스트(개발직군)") |
 | 복지 | 기업 | 공고·직무와 무관한 기업 공통 정보 |
+| 개인 메모 | 기업·공고·직무 | 대상마다 별도 기록. 원문 Markdown으로 저장하고 상세에서만 렌더링 |
 
 ## 불변 조건
 
@@ -52,6 +53,7 @@ app_users
 5. **자동 보관**: 마감 지남 + `status ∈ {INTERESTED, DRAFTING}` 인 공고는 미지원으로, 세 탈락 상태와 기존 `CLOSED`는 즉시 보관한다. 탈락이 아닌 상태로 옮기면 보관함에서 자동으로 꺼낸다.
 6. **참고 정보는 계정 안에서 공유**(결정 1): 한 참고 정보가 여러 직무에 붙는다. 다른 사용자와는 공유하지 않는다.
 7. **절차는 공고 단위**(결정 2). `seq` 는 `@OrderColumn` 이 관리하는 0-based 정수. 분기 없음.
+8. **메모는 원문 저장**: 기업·공고·직무 memo는 5,000자 이하 Markdown 문자열이다. 서버는 HTML로 변환하지 않는다.
 
 ## 진입점
 
@@ -64,9 +66,12 @@ app_users
 | 참고 정보 | `reference/ReferenceItem` `ReferenceService` `ReferenceController` — `ApiPaths.REFERENCES` · 연결은 `PUT /positions/{id}/references` |
 | 기업 자동 생성 | `JobPostingService.resolveCompany()` + `CompanyRepository.findByOwnerIdAndNameKey()` |
 | 화면 | `PostingBoard`(홈 `/`, 관심 공고/진행 중/보관함 칸반) · `PositionBoard`(`/positions`) · `CompanyWorkspace`(`/companies`) |
+| Markdown 메모 | `MarkdownTextarea.vue`(Tab·들여쓰기) · `MarkdownMemo.vue`(안전한 렌더링) · `utils/markdown.ts`(지원 문법 파서) |
 | D-day·절차 표기 | `frontend/src/types/posting.ts` — `daysUntil` `ddayLabel` `ddayTone` `formatDeadline` `nextStepResult` |
 | 화면 간 이동 | `routes.ts` 의 `FOCUS_QUERY`. `App.navigate(route, id)` → `?focus=<id>` → 보드가 `applyFocus()`/`openById()` 로 그 드로어를 연다 |
 | 이동 방향 | 정방향(자식, 행 더블클릭): 기업→공고, 공고→직무. 역방향(부모, 링크 버튼): 공고→기업, 직무→공고 |
+
+공고·기업·직무 상세의 일반 읽기 값을 더블클릭하면 기존 수정 폼을 연다. 정방향 이동 행과 링크·버튼·입력은 원래 동작을 유지한다. 참고 정보 카드를 더블클릭하면 직무가 아니라 그 참고 정보의 수정 폼을 연다.
 
 ## API 요약 (상세는 Swagger)
 
@@ -111,6 +116,8 @@ cd frontend && npm run type-check && npm test
 17. 채용 절차 노드를 누를 때 예정과 완료만 번갈아 표시되는가
 18. 공고 제목 옆 숫자는 없고 관심 공고·진행 중·보관함 탭마다 원형 개수 배지가 보이는가
 19. 직무 상세와 수정에서 요구·우대 역량이 성장 방향·취득 경험보다 먼저 나오는가
+20. 기업·공고·직무 메모에서 `#`~`######`, `-`, `1.` 목록, 들여쓰기가 표시되고 bare http(s) URL과 `[이름](URL)`이 새 탭 링크가 되는가
+21. 세 메모 입력칸에서 Tab은 두 칸 들여쓰기, Shift+Tab은 들여쓰기 제거로 동작하는가
 
 ## 함정
 
@@ -132,3 +139,4 @@ cd frontend && npm run type-check && npm test
 - 매출액은 DB에 원 단위 `annual_revenue`와 입력·표시 단위 `revenue_unit`을 함께 저장한다. 계산 기준은 만 원=`10,000원`, 억 원=`100,000,000원`이다.
 - **드롭 규칙**: 관심 공고 탭=`INTERESTED`, 진행 중 탭=`SUBMITTED`. 보관함 탭은 제출 완료→서류 탈락, 필기 준비→필기 탈락, 면접 준비→면접 탈락이고 관심·작성 중은 상태를 유지해 미지원에 둔다. 합격처럼 매핑이 없는 상태도 상태를 유지한 채 `기타 보관`에 둔다. 열에 직접 놓으면 그 열 상태가 우선한다.
 - 탭 개수는 진행 목록과 보관 목록을 함께 읽어 계산한다. 관심 공고는 `INTERESTED·DRAFTING`, 진행 중은 나머지 미보관 상태, 보관함은 보관 목록 전체 개수다.
+- Markdown은 사용자 HTML을 해석하지 않는다. 지원 문법만 Vue 노드로 만들고 링크도 `http://`·`https://`만 허용한다. 제목·목록·링크 외 문법은 평문으로 남는다.

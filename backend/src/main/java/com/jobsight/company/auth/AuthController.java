@@ -1,6 +1,7 @@
 package com.jobsight.company.auth;
 
 import com.jobsight.company.auth.dto.MeResponse;
+import com.jobsight.company.common.ApiRuleException;
 import com.jobsight.company.common.ApiPaths;
 import com.jobsight.company.setting.AppSettingService;
 import com.jobsight.company.user.AppUserService;
@@ -10,34 +11,46 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.Map;
 
 /**
  * 로그인은 Google OAuth 로만 한다: GET /oauth2/authorization/google (Spring Security 필터).
  * 로그아웃은 POST /api/auth/logout (Spring Security 필터).
- * 여기에는 세션 조회, 본인 이름 수정, 로그인 화면 옵션만 있다.
+ * 여기에는 세션 조회·갱신, 본인 이름 수정, 로그인 화면 옵션이 있다.
  */
-@Tag(name = "auth", description = "세션 상태·본인 정보와 로그인 화면 옵션. 로그인/로그아웃 자체는 Spring Security 필터가 처리한다.")
+@Tag(name = "auth", description = "세션 상태·갱신, 본인 정보와 로그인 화면 옵션. Google 로그인과 로그아웃은 Spring Security 필터가 처리한다.")
 @RestController
 @RequestMapping(ApiPaths.AUTH)
 public class AuthController {
     private final AppUserService users;
     private final AppSettingService settings;
     private final CurrentUser currentUser;
+    private final BrowserRefreshTokenService refreshTokens;
     private final ObjectProvider<ClientRegistrationRepository> clientRegistrations;
+    private final SecurityContextRepository securityContexts = new HttpSessionSecurityContextRepository();
 
     public AuthController(AppUserService users, AppSettingService settings, CurrentUser currentUser,
+                          BrowserRefreshTokenService refreshTokens,
                           ObjectProvider<ClientRegistrationRepository> clientRegistrations) {
         this.users = users;
         this.settings = settings;
         this.currentUser = currentUser;
+        this.refreshTokens = refreshTokens;
         this.clientRegistrations = clientRegistrations;
     }
 
@@ -65,6 +78,28 @@ public class AuthController {
                 "googleEnabled", clientRegistrations.getIfAvailable() != null,
                 "autoApproveSignup", settings.isAutoApproveSignup()
         );
+    }
+
+    @Operation(summary = "브라우저 세션 갱신",
+            description = "HttpOnly 리프레시 토큰을 회전하고 새 30분 세션을 만든다. 토큰이 없거나 계정이 비활성이면 401.")
+    @PostMapping(ApiPaths.AUTH_REFRESH)
+    public ResponseEntity<Void> refresh(HttpServletRequest request, HttpServletResponse response) {
+        var user = refreshTokens.rotate(request, response)
+                .orElseThrow(() -> new ApiRuleException(
+                        HttpStatus.UNAUTHORIZED,
+                        "REFRESH_REJECTED", "로그인을 다시 진행해 주세요."));
+
+        AppSessionUser principal = new AppSessionUser(user);
+        var authentication = UsernamePasswordAuthenticationToken.authenticated(
+                principal, null, principal.getAuthorities());
+        var context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+
+        request.getSession(true);
+        request.changeSessionId();
+        securityContexts.saveContext(context, request, response);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "nginx auth_request 전용 관리자 확인",

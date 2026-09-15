@@ -50,11 +50,13 @@ export interface ResumeSummary {
 
 export interface Resume extends ResumeSummary {
   content: ResumeContent
+  positionIds: string[]
 }
 
 export interface ResumePayload {
   name: string
   content: ResumeContent
+  positionIds: string[]
 }
 
 export type FieldKind = 'text' | 'ym' | 'url' | 'textarea' | 'file' | 'select' | 'terms'

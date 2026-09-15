@@ -14,6 +14,7 @@ export const ROUTES = {
   positions: '/positions',
   companies: '/companies',
   resumes: '/resumes',
+  introductions: '/introductions',
   admin: '/admin',
   plugin: '/plugin',
 } as const
@@ -22,6 +23,7 @@ export const ROUTES = {
 export const API = {
   me: '/api/auth/me',
   loginOptions: '/api/auth/login-options',
+  refresh: '/api/auth/refresh',
   logout: '/api/auth/logout',
   companies: '/api/companies',
   company: (id: string) => `/api/companies/${id}`,
@@ -40,6 +42,8 @@ export const API = {
   resumes: '/api/resumes',
   resume: (id: string) => `/api/resumes/${id}`,
   resumeCopy: (id: string) => `/api/resumes/${id}/copy`,
+  selfIntroductions: '/api/self-introductions',
+  selfIntroduction: (id: string) => `/api/self-introductions/${id}`,
   attachments: '/api/attachments',
   attachment: (id: string) => `/api/attachments/${id}`,
   attachmentMeta: (id: string) => `/api/attachments/${id}/meta`,

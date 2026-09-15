@@ -1,8 +1,12 @@
 package com.jobsight.company.resume;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -10,6 +14,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -33,6 +39,11 @@ public class Resume {
     @Column(nullable = false, columnDefinition = "jsonb")
     private String content;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "resume_positions", joinColumns = @JoinColumn(name = "resume_id"))
+    @Column(name = "position_id", nullable = false)
+    private Set<UUID> positionIds = new LinkedHashSet<>();
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -52,6 +63,11 @@ public class Resume {
     public void update(String name, String contentJson) {
         this.name = name;
         this.content = contentJson;
+        this.updatedAt = Instant.now();
+    }
+
+    public void replacePositions(Set<UUID> positionIds) {
+        this.positionIds = new LinkedHashSet<>(positionIds);
         this.updatedAt = Instant.now();
     }
 
@@ -78,6 +94,7 @@ public class Resume {
     public UUID getOwnerId() { return ownerId; }
     public String getName() { return name; }
     public String getContent() { return content; }
+    public Set<UUID> getPositionIds() { return positionIds; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 }

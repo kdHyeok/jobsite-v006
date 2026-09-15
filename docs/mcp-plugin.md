@@ -19,6 +19,7 @@
 - 초기 구현의 OAuth 승인·토큰은 단일 프로세스 메모리에 보관한다. 재시작 시 재연결이 필요하다.
   다중 replica 또는 재시작 후 연결 유지가 필요하면 Spring의 JDBC authorization/consent 저장소로 교체한다.
 - 기업·공고 삭제 cascade, 마지막 직무 삭제 방지, 참고 정보 공유, 소유자 404 규칙은 기존 서비스가 담당한다.
+- 기업·공고·직무의 `memo`는 렌더링된 HTML이 아닌 Markdown 원문으로 조회·저장한다.
 
 ## 실행·검증
 
@@ -90,7 +91,7 @@ ZIP 루트는 `.codex-plugin/plugin.json`, `.mcp.json`, `skills/jobsight/SKILL.m
 
 ## 도구 계약과 검증 범위
 
-도구는 48개이며 입력은 `id`, `companyId`, `postingId`, `q`, `archived`, `seq`, `section`, `index`, `request`처럼 실제 메서드 인자를 사용한다.
+도구는 53개이며 입력은 `id`, `companyId`, `postingId`, `q`, `archived`, `seq`, `section`, `index`, `request`처럼 실제 메서드 인자를 사용한다.
 도구명·동작별 사용법은 스킬에 있다. `/mcp`의 `tools/list`는 연결 계정의 scope/역할에 따라 목록을 줄인다.
 관리자 도구 7개는 일반 사용자에게 노출하지 않으며 직접 이름을 호출해도 거부한다.
 `posting_list`는 자동 보관을 일으켜 쓰기 scope와 readOnlyHint=false를 사용한다.

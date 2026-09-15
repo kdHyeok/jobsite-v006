@@ -1,4 +1,5 @@
 import type { ApiErrorBody } from '../types/company'
+import { API } from '../routes'
 
 export class ApiClientError extends Error {
   public readonly status: number
@@ -27,21 +28,45 @@ function csrfToken(): string {
   return match ? decodeURIComponent(match[1]) : ''
 }
 
+let refreshInFlight: Promise<boolean> | null = null
+
+/** 여러 API가 동시에 401이어도 리프레시 토큰은 한 번만 회전한다. */
+export function refreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(API.refresh, {
+      method: 'POST',
+      headers: { 'X-XSRF-TOKEN': csrfToken() },
+      credentials: 'same-origin',
+    })
+      .then((response) => response.status === 204)
+      .catch(() => false)
+      .finally(() => { refreshInFlight = null })
+  }
+  return refreshInFlight
+}
+
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? 'GET').toUpperCase()
-  const headers: Record<string, string> = { ...(init?.headers as Record<string, string>) }
 
-  // URLSearchParams 본문은 fetch가 알아서 form-urlencoded 헤더를 붙인다.
-  // FormData 도 마찬가지다 — 여기서 Content-Type 을 넣으면 boundary 가 빠져 서버가 파트를 못 읽는다.
-  const selfTyped = init?.body instanceof URLSearchParams || init?.body instanceof FormData
-  if (init?.body && !selfTyped && !headers['Content-Type']) {
-    headers['Content-Type'] = 'application/json'
-  }
-  if (!SAFE_METHODS.includes(method)) {
-    headers['X-XSRF-TOKEN'] = csrfToken()
+  function headers(): Record<string, string> {
+    const value: Record<string, string> = { ...(init?.headers as Record<string, string>) }
+    // URLSearchParams 본문은 fetch가 알아서 form-urlencoded 헤더를 붙인다.
+    // FormData 도 마찬가지다 — 여기서 Content-Type 을 넣으면 boundary 가 빠져 서버가 파트를 못 읽는다.
+    const selfTyped = init?.body instanceof URLSearchParams || init?.body instanceof FormData
+    if (init?.body && !selfTyped && !value['Content-Type']) {
+      value['Content-Type'] = 'application/json'
+    }
+    if (!SAFE_METHODS.includes(method)) {
+      value['X-XSRF-TOKEN'] = csrfToken()
+    }
+    return value
   }
 
-  const response = await fetch(path, { ...init, headers, credentials: 'same-origin' })
+  const send = () => fetch(path, { ...init, headers: headers(), credentials: 'same-origin' })
+  let response = await send()
+  if (response.status === 401 && path !== API.refresh && await refreshSession()) {
+    response = await send()
+  }
 
   if (!response.ok) {
     let body: Partial<ApiErrorBody> = {}
