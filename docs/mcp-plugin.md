@@ -18,6 +18,11 @@
 - resource는 `PUBLIC_BASE_URL + /mcp` 하나다. OAuth 토큰은 이 서버에서만 유효하며 Google 토큰을 전달하지 않는다.
 - OAuth 승인·토큰은 Spring JDBC 저장소로 PostgreSQL에 보관한다. access token은 1시간,
   회전형 refresh token은 90일이며 서버 재시작 후에도 연결을 유지한다. 계정 정지·삭제 시에는 남은 토큰 기간과 무관하게 MCP 요청을 거부한다.
+- OAuth 승인 행에는 Google `AppOidcUser` 객체를 직렬화하지 않는다. 인가 요청 동안에는 사용자 ID와 권한만
+  가진 Spring 기본 principal로 축약한다. 그렇지 않으면 동의 POST에서 JDBC 행을 읽을 때 Jackson 허용 목록에
+  의해 역직렬화가 거부되어 500이 난다.
+- access token의 `aud` claim은 `ArrayList`로 저장한다. `List.of()`의 런타임 타입인
+  `java.util.ImmutableCollections$List12`도 같은 Jackson 허용 목록에서 거부되므로 사용하지 않는다.
 - 기업·공고 삭제 cascade, 마지막 직무 삭제 방지, 참고 정보 공유, 소유자 404 규칙은 기존 서비스가 담당한다.
 - 기업·공고·직무의 `memo`는 렌더링된 HTML이 아닌 Markdown 원문으로 조회·저장한다.
 
@@ -106,6 +111,10 @@ MCP 는 문서 전체를 되돌려 보내기 어려워 서버가 조회→한 �
 
 인증 테스트는 외부 Google 자격증명 없이 인증된 세션을 주입하고 실제 Spring OAuth 필터의 코드 발급/교환을 검증한다.
 실제 Google 왕복 및 ChatGPT 서비스 연결과 같다고 간주하지 않는다.
+`McpOAuthJdbcIntegrationTest`는 PostgreSQL에서 실제 `AppOidcUser` 인가 행을 저장한 뒤 state로 다시 읽어,
+동의 화면 다음 요청에서 principal 역직렬화가 실패하지 않는지 검증한다. 이어서 인가 코드 교환, JDBC에 저장된
+access token을 사용한 MCP initialize와 실제 전체 `tools/list`, refresh token 교환까지 수행해 토큰 metadata와
+Spring 프록시가 적용된 운영 빈의 도구 설명도 다시 읽을 수 있는지 확인한다.
 
 ### 2026-09-07 검증 결과
 
@@ -142,6 +151,25 @@ MCP 는 문서 전체를 되돌려 보내기 어려워 서버가 조회→한 �
   인가 코드 교환, refresh token 발급·회전, 이전 토큰 재사용 거부, 정지 계정 접근 거부를 검증했다.
 - Compose 재빌드 후 PostgreSQL 마이그레이션이 `now at version v21`, 백엔드 healthy, 스모크 45개 PASS다.
 - 실제 ChatGPT의 자동 갱신과 배포 서버 재시작 전후 연결 유지는 배포 후 확인해야 한다.
+
+### ChatGPT 동의 화면 JDBC 500 수정 검증 (2026-09-16)
+
+- Google 로그인 principal인 `AppOidcUser`가 JDBC 승인 행에 저장된 뒤 동의 POST에서 Jackson 허용 목록에
+  거부되던 500을 재현했다. MCP 인가 요청에 한해 사용자 UUID와 권한만 가진 기본 principal로 축약했다.
+- PostgreSQL Testcontainers에서 실제 `AppOidcUser`로 동의 화면을 열고 승인 행을 다시 읽는 회귀 테스트 및
+  백엔드 전체 테스트가 통과했다.
+- 첫 수정 배포 후 실제 ChatGPT가 토큰 발급에는 성공했지만, `aud`의 `List.of()` 런타임 타입을 JDBC에서
+  다시 읽지 못해 Bearer MCP 호출과 refresh가 500이 되는 두 번째 문제를 확인했다. 회귀 테스트를 코드 교환,
+  MCP initialize, refresh token 회전까지 확장했고 백엔드 전체 61개가 통과했다(`BUILD SUCCESSFUL`, 실패 0).
+- 개발 서버 백엔드를 재빌드·교체했고 컨테이너 3개 healthy, Flyway v21 최신 상태, 스모크 45개 PASS를 확인했다.
+- 이전 버전이 발급한 역직렬화 불가능 OAuth 행 1개를 정확히 삭제했다. 실제 ChatGPT의 Google 로그인·JobSight
+  동의·callback·액션 새로 고침은 사용자가 새 인증 요청으로 다시 확인해야 한다.
+- 두 번째 배포 후 실제 ChatGPT `tools/list`에서 Spring 프록시 클래스의 override 메서드에는 `@Operation`이
+  직접 보이지 않아 500이 발생했다. 도구 등록 시 실제 target class 메서드와 병합 annotation을 고정하고,
+  annotation 누락은 시작 단계에서 명시적으로 실패하도록 변경했다.
+- 수정 후 PostgreSQL 통합 테스트는 최초 access token과 refresh로 회전된 access token 양쪽에서 실제
+  `tools/list` 및 `self_intro_list` 제목을 검증한다. 백엔드 전체 61개와 공개 스모크 45개가 통과했고,
+  배포 서버의 기존 ChatGPT access token으로 공개 `/mcp`를 직접 호출해 46개 도구와 해당 제목을 확인했다.
 
 ## 함정 — scope는 세 곳에서 광고된다
 

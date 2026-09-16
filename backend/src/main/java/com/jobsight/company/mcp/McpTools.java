@@ -12,6 +12,8 @@ import com.jobsight.company.selfintro.SelfIntroductionController;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Validator;
 import org.springframework.http.ResponseEntity;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -26,7 +28,8 @@ import java.util.*;
 /** Explicit method allowlist. DTOs and @Operation remain the API source of truth. */
 @Component
 public class McpTools {
-    private record Tool(Object bean, Method method, String scope, boolean destructive, boolean readOnly) {}
+    private record Tool(Object bean, Method method, Operation operation, String scope,
+                        boolean destructive, boolean readOnly) {}
     private final Map<String, Tool> tools = new TreeMap<>();
     private final ObjectMapper mapper;
     private final Validator validator;
@@ -95,9 +98,12 @@ public class McpTools {
     }
 
     private void register(String name, Object bean, String methodName, boolean readOnly, boolean destructive) {
-        Method method = Arrays.stream(bean.getClass().getMethods()).filter(m -> m.getName().equals(methodName))
+        Method method = Arrays.stream(AopUtils.getTargetClass(bean).getMethods()).filter(m -> m.getName().equals(methodName))
                 .findFirst().orElseThrow();
-        tools.put(name, new Tool(bean, method, name.startsWith("admin_") ? McpOAuthConfig.ADMIN
+        Operation operation = AnnotatedElementUtils.findMergedAnnotation(method, Operation.class);
+        if (operation == null) throw new IllegalStateException(
+                "MCP tool method is missing @Operation: " + method.getDeclaringClass().getName() + "." + methodName);
+        tools.put(name, new Tool(bean, method, operation, name.startsWith("admin_") ? McpOAuthConfig.ADMIN
                 : readOnly ? McpOAuthConfig.READ : McpOAuthConfig.WRITE, destructive, readOnly));
     }
 
@@ -112,7 +118,7 @@ public class McpTools {
     public List<Map<String, Object>> list(McpPrincipal principal) {
         return tools.entrySet().stream().filter(entry -> permitted(entry.getValue(), principal)).map(entry -> {
             var tool = entry.getValue();
-            var operation = tool.method.getAnnotation(Operation.class);
+            var operation = tool.operation;
             String description = operation.summary() + ". " + operation.description();
             if (tool.method.getName().equals("update")) description += " 전체 교체: 먼저 조회하고 유지할 필드도 request에 포함하세요.";
             List<String> scopes = new ArrayList<>(List.of(tool.scope));

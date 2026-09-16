@@ -1,6 +1,7 @@
 package com.jobsight.company.mcp;
 
 import com.jobsight.company.common.ApiPaths;
+import com.jobsight.company.auth.AppPrincipal;
 import com.jobsight.company.user.AppUserRepository;
 import com.jobsight.company.user.UserStatus;
 import jakarta.servlet.FilterChain;
@@ -128,7 +129,9 @@ public class McpOAuthConfig {
     @Bean
     OAuth2TokenGenerator<?> mcpTokenGenerator() {
         var access = new OAuth2AccessTokenGenerator();
-        access.setAccessTokenCustomizer(context -> context.getClaims().audience(List.of(resource())));
+        // JDBC authorization metadata is polymorphically deserialized through Spring's Jackson allow-list.
+        // List.of() produces java.util.ImmutableCollections$List12, which that allow-list rejects.
+        access.setAccessTokenCustomizer(context -> context.getClaims().audience(new ArrayList<>(List.of(resource()))));
         var keys = new Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 96);
         OAuth2TokenGenerator<OAuth2RefreshToken> refresh = context -> {
             if (!OAuth2TokenType.REFRESH_TOKEN.equals(context.getTokenType())) return null;
@@ -163,20 +166,36 @@ public class McpOAuthConfig {
                     @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                                                FilterChain chain) throws ServletException, IOException {
                         String path = request.getRequestURI();
-                        // Consent POST uses Spring's stored request, not an untrusted resource parameter.
-                        boolean initial = path.equals(ApiPaths.MCP_AUTHORIZE) && "GET".equals(request.getMethod());
-                        if (initial || path.equals(ApiPaths.MCP_TOKEN)) {
-                            String[] resources = request.getParameterValues("resource");
-                            if (resources == null || resources.length != 1 || !resource().equals(resources[0])) {
-                                response.setStatus(400); response.setContentType("application/json");
-                                response.getWriter().write("{\"error\":\"invalid_target\"}"); return;
+                        // JDBC authorization rows must not contain the custom Google OIDC principal. Spring's
+                        // default Jackson allow-list cannot deserialize AppOidcUser on the consent POST.
+                        // Keep only the stable application user id and authorities for this authorization request.
+                        Authentication original = SecurityContextHolder.getContext().getAuthentication();
+                        boolean sanitized = path.equals(ApiPaths.MCP_AUTHORIZE) && original != null
+                                && original.getPrincipal() instanceof AppPrincipal;
+                        try {
+                            if (sanitized) {
+                                var principal = (AppPrincipal) original.getPrincipal();
+                                SecurityContextHolder.getContext().setAuthentication(
+                                        new UsernamePasswordAuthenticationToken(principal.appUserId().toString(), null,
+                                                original.getAuthorities()));
                             }
-                            if (initial && !"S256".equals(request.getParameter("code_challenge_method"))) {
-                                response.setStatus(400); response.setContentType("application/json");
-                                response.getWriter().write("{\"error\":\"invalid_request\"}"); return;
+                            // Consent POST uses Spring's stored request, not an untrusted resource parameter.
+                            boolean initial = path.equals(ApiPaths.MCP_AUTHORIZE) && "GET".equals(request.getMethod());
+                            if (initial || path.equals(ApiPaths.MCP_TOKEN)) {
+                                String[] resources = request.getParameterValues("resource");
+                                if (resources == null || resources.length != 1 || !resource().equals(resources[0])) {
+                                    response.setStatus(400); response.setContentType("application/json");
+                                    response.getWriter().write("{\"error\":\"invalid_target\"}"); return;
+                                }
+                                if (initial && !"S256".equals(request.getParameter("code_challenge_method"))) {
+                                    response.setStatus(400); response.setContentType("application/json");
+                                    response.getWriter().write("{\"error\":\"invalid_request\"}"); return;
+                                }
                             }
+                            chain.doFilter(request, response);
+                        } finally {
+                            if (sanitized) SecurityContextHolder.getContext().setAuthentication(original);
                         }
-                        chain.doFilter(request, response);
                     }
                 }, SecurityContextHolderFilter.class);
         return http.build();

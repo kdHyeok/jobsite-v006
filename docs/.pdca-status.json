@@ -1,0 +1,75 @@
+{
+  "version": "2.0",
+  "lastUpdated": "2026-09-16T07:08:00.455Z",
+  "activeFeatures": [
+    "mcp-plugin"
+  ],
+  "primaryFeature": "mcp-plugin",
+  "features": {
+    "mcp-plugin": {
+      "phase": "completed",
+      "matchRate": null,
+      "iterationCount": 0,
+      "documents": {},
+      "completedAt": "2026-09-16T07:08:00.454Z"
+    }
+  },
+  "pipeline": {
+    "currentPhase": 1,
+    "level": "Starter",
+    "phaseHistory": []
+  },
+  "session": {
+    "startedAt": "2026-09-06T21:43:21.289Z",
+    "onboardingCompleted": false,
+    "lastActivity": "2026-09-16T07:08:00.455Z"
+  },
+  "history": [
+    {
+      "feature": "mcp-plugin",
+      "from": "do",
+      "to": "check",
+      "timestamp": "2026-09-06T21:43:21.291Z"
+    },
+    {
+      "feature": "mcp-plugin",
+      "action": "phase_complete",
+      "phase": "do",
+      "nextPhase": "check",
+      "timestamp": "2026-09-06T21:43:21.291Z"
+    },
+    {
+      "feature": "mcp-plugin",
+      "from": "check",
+      "to": "act",
+      "timestamp": "2026-09-16T05:55:52.421Z"
+    },
+    {
+      "feature": "mcp-plugin",
+      "action": "phase_complete",
+      "phase": "check",
+      "nextPhase": "act",
+      "timestamp": "2026-09-16T05:55:52.421Z"
+    },
+    {
+      "feature": "mcp-plugin",
+      "from": "act",
+      "to": "report",
+      "timestamp": "2026-09-16T06:18:17.261Z"
+    },
+    {
+      "feature": "mcp-plugin",
+      "action": "phase_complete",
+      "phase": "act",
+      "nextPhase": "report",
+      "timestamp": "2026-09-16T06:18:17.261Z"
+    },
+    {
+      "feature": "mcp-plugin",
+      "action": "phase_complete",
+      "phase": "report",
+      "nextPhase": "completed",
+      "timestamp": "2026-09-16T07:08:00.455Z"
+    }
+  ]
+}

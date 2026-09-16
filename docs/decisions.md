@@ -22,6 +22,19 @@ Strict 는 accounts.google.com 에서 돌아오는 콜백에 세션 쿠키를 �
 ## MCP OAuth 상태는 PostgreSQL에 저장하고 refresh token은 90일 회전 (V21)
 MCP access token은 노출 피해를 줄이기 위해 1시간으로 유지하고, 클라이언트가 90일 유효한 refresh token으로 갱신한다. refresh token은 사용할 때마다 교체하며 authorization·consent를 PostgreSQL에 저장해 서버 재시작 뒤에도 연결을 유지한다. 계정 상태는 모든 MCP 요청에서 다시 조회하므로 정지·삭제된 계정은 토큰 만료 전에도 접근할 수 없다.
 
+## MCP JDBC 승인에는 Google principal 객체를 저장하지 않는다
+Spring Authorization Server는 인가 요청의 principal을 승인 행 attributes에 함께 저장한다. 사용자 정의
+`AppOidcUser`를 그대로 저장하면 쓰기는 되지만 기본 Jackson 허용 목록이 동의 POST의 역직렬화를 거부한다.
+MCP 인가 체인에서만 principal을 애플리케이션 사용자 UUID와 현재 권한을 가진 Spring 기본 토큰으로 축약한다.
+브라우저 세션의 Google principal은 바꾸지 않으며, DB에 불필요한 Google claim을 복제하지 않는다.
+토큰 claims도 같은 허용 목록을 통과해야 한다. 따라서 `aud`는 `List.of()`가 만드는 JDK 내부 immutable 구현체가
+아니라 Jackson이 허용하는 `ArrayList`로 저장한다. 이 결정은 Bearer 요청과 refresh token 갱신 모두에 적용된다.
+
+## MCP 도구 메타데이터는 Spring 프록시가 아닌 target method에서 읽는다
+운영 빈에는 Spring CGLIB 프록시가 적용될 수 있고 override 메서드에는 원본 `@Operation`이 직접 복사되지 않는다.
+도구 등록 시 target class의 메서드와 병합 annotation을 고정하며, annotation이 없으면 첫 `tools/list`의 500이
+아니라 서버 시작 시 도구 이름과 함께 실패시킨다.
+
 ## 메모 Markdown은 HTML 변환 문자열을 저장하지 않는다 (V18)
 기업·공고·직무 메모는 사용자가 고칠 수 있는 Markdown 원문만 저장한다. 프런트는 요청된 제목·목록·들여쓰기·http(s) 링크만 Vue 노드로 렌더링하고 사용자 HTML은 해석하지 않는다. DB에 HTML을 저장하거나 `v-html`을 쓰지 않아 XSS 정화 라이브러리와 이중 정본을 만들지 않는다.
 
