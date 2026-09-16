@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { fetchLoginOptions } from '../api/auth'
-import { AUTH_ERROR_QUERY, GOOGLE_LOGIN_URL } from '../routes'
+import { AUTH_ERROR_QUERY, googleLoginUrl } from '../routes'
 
 const googleEnabled = ref(false)
 const autoApproveSignup = ref(false)
 const errorMessage = ref('')
 const notice = ref('')
+const loginUrl = googleLoginUrl()
 
 /** Google 로그인은 리다이렉트로 돌아오므로 결과를 쿼리 파라미터로 받는다. */
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
@@ -53,7 +54,7 @@ onMounted(async () => {
       <div v-if="notice" class="notice success" role="status">{{ notice }}</div>
       <div v-if="errorMessage" class="notice error" role="alert">{{ errorMessage }}</div>
 
-      <a v-if="googleEnabled" class="button google-button" :href="GOOGLE_LOGIN_URL">
+      <a v-if="googleEnabled" class="button google-button" :href="loginUrl">
         <span class="google-mark" aria-hidden="true">G</span>
         Google로 계속하기
       </a>

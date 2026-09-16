@@ -18,8 +18,9 @@
 
 - `/plugin`은 비로그인 사용자도 볼 수 있는 연결 가이드다. 상단 메뉴 버튼의 작은 사이드 패널로 진입한다. 관리자 항목은 ADMIN만 표시한다. canonical URL은 서버 공개 설정에서 가져온다. 화면에는 ChatGPT URL 연결과 Codex GitHub 설치·업데이트에 필요한 동작만 표시하고 CIMD·scope·수동 OAuth 같은 내부 설정은 노출하지 않는다.
 
-- **base URL 을 모른다.** nginx 뒤 same-origin 이라 상대 경로만 쓴다. 절대 URL 을 만들면 포트 차이에 노출된다.
-- **로그인은 fetch 가 아니라 네비게이션.** `<a :href="GOOGLE_LOGIN_URL">`. 실패는 `/?authError=CODE` 로 돌아오며 `LoginView` 가 문구로 바꾸고 쿼리를 지운다.
+- **base URL 을 모른다.** nginx 뒤 same-origin 이라 상대 경로만 쓴다. 단, `localhost:8088`의 Google 로그인 시작만 쿠키 호스트가 갈라지지 않도록 `127.0.0.1:8088`로 보낸다.
+- **로그인은 fetch 가 아니라 네비게이션.** `<a :href="googleLoginUrl()">`. 실패는 `/?authError=CODE` 로 돌아오며 `LoginView` 가 문구로 바꾸고 쿼리를 지운다.
+- 첫 세션 확인이 실패하면 로그인 화면을 함께 노출하지 않는다. 연결 실패와 `다시 시도`만 표시해 장애를 비로그인으로 오인하지 않게 한다.
 - 첫 `me`가 비로그인이라도 HttpOnly 리프레시 쿠키가 있으면 한 번 갱신한다. 여러 API가 동시에 401을 받아도 공유 Promise 하나만 토큰을 회전한다. 실패하면 기존 401/로그인 화면 흐름을 그대로 쓴다.
 - **상태 보유자는 화면당 하나.** 자식은 props-down / events-up. Pinia 없음.
 - **목록은 핵심만, 나머지는 클릭.** 카드에 필드를 더하고 싶으면 드로어 상세에 넣는다 — design-system.md 규칙 3.
