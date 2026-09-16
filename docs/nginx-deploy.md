@@ -24,7 +24,7 @@ MCP의 정확한 OAuth callback 설정은 선택적 `compose.mcp.yaml`에서 `MC
 등록 절차와 공개 HTTPS 접근 조건은 [mcp-plugin.md](mcp-plugin.md)를 따른다.
 
 - `compose.yaml` 하나로 로컬·서버 모두 소스에서 빌드한다. 이미지 레지스트리를 쓰지 않는다.
-- DB 이름·사용자 값이 비어 있으면 Compose 보간 단계에서 중단한다. frontend healthcheck는 정적 nginx뿐 아니라 `/api/auth/me`를 통해 backend 응답까지 확인하고 3회 연속 실패하면 unhealthy가 된다.
+- DB 이름·사용자 값이 비어 있으면 Compose 보간 단계에서 중단한다. backend는 DB 연결을 3초 안에 실패시키고 60초의 초기 기동 유예 뒤 healthcheck 3회 연속 실패 시 unhealthy가 된다. frontend healthcheck는 DB를 조회하는 `/api/auth/login-options`까지 확인해 backend·DB 장애를 함께 감지한다.
 - 비밀값: `.secrets/postgres_password`, `.secrets/google_client_secret` → compose secret → 컨테이너 `/run/secrets/<프로퍼티키>` → Spring `configtree`. 파일 이름이 프로퍼티 키다.
 - 설정: `.env` 의 `PUBLIC_BASE_URL`, `APP_ADMIN_EMAIL`, `GOOGLE_CLIENT_ID`, `SESSION_COOKIE_SECURE`(HTTPS 뒤에서만 true).
 - 새 키를 추가하면 `.env.example`·`compose.yaml`·`docs/local-dev.md` 세 곳.

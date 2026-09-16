@@ -182,6 +182,25 @@ describe('App 접근 제어', () => {
     expect(wrapper.text()).toContain('Google 로그인이 아직 설정되지 않았습니다.')
   })
 
+  it('로그인 옵션 조회 실패를 Google 미설정으로 오인하지 않고 재시도한다', async () => {
+    vi.mocked(auth.fetchMe).mockResolvedValue(anonymous)
+    vi.mocked(auth.fetchLoginOptions)
+      .mockRejectedValueOnce(new Error('Failed to fetch'))
+      .mockResolvedValueOnce({ googleEnabled: true, autoApproveSignup: false })
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('로그인 설정을 확인하지 못했습니다.')
+    expect(wrapper.text()).not.toContain('Google 로그인이 아직 설정되지 않았습니다.')
+    expect(wrapper.find('.google-button').exists()).toBe(false)
+
+    await wrapper.get('.auth-card .notice.error button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.google-button').exists()).toBe(true)
+  })
+
   it('세션 확인이 실패하면 로그인 대신 연결 실패와 재시도만 보여준다', async () => {
     vi.mocked(auth.fetchMe).mockRejectedValueOnce(new Error('Failed to fetch')).mockResolvedValueOnce(anonymous)
 
