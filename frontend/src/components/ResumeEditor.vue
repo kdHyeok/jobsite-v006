@@ -72,8 +72,10 @@ const basicValue = (key: string) => content.value.basic[key as keyof typeof cont
 const selectedPositions = computed(() => props.positions.filter((item) => positionIds.value.includes(item.id)))
 const positionMatches = computed(() => {
   const query = positionQuery.value.trim().toLocaleLowerCase()
-  if (!query) return []
-  return props.positions.filter((item) => !positionIds.value.includes(item.id) && `${item.name} ${item.companyName ?? ''} ${item.postingTitle ?? ''}`.toLocaleLowerCase().includes(query)).slice(0, 10)
+  return props.positions
+    .filter((item) => !positionIds.value.includes(item.id))
+    .filter((item) => !query || `${item.name} ${item.companyName ?? ''} ${item.postingTitle ?? ''}`.toLocaleLowerCase().includes(query))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 })
 const attachmentCandidates = computed(() => {
   const found: { id: string; label: string }[] = []
@@ -144,15 +146,16 @@ async function exportPdf() {
 
     <section class="resume-section">
       <div class="resume-section__head"><h2>지원 직무 <span class="page-count">{{ positionIds.length }}</span></h2></div>
-      <div class="selected-positions">
-        <button v-for="position in selectedPositions" :key="position.id" type="button" class="chip" :aria-label="`${position.name} 연결 해제`" @click="removePosition(position.id)">{{ position.name }} ×</button>
-      </div>
       <label class="field full"><span>직무 검색</span><input v-model="positionQuery" placeholder="직무명, 기업명, 공고명 검색" /></label>
       <p v-if="positions.length === 0" class="body-copy empty">연결할 모집 직무가 없습니다.</p>
       <div v-else-if="positionMatches.length" class="position-picker">
         <button v-for="position in positionMatches" :key="position.id" type="button" class="position-option" @click="addPosition(position.id)">
           <span><strong>{{ position.name }}</strong><small>{{ position.companyName || '회사 미입력' }} · {{ position.postingTitle || '공고 미입력' }}</small></span>
         </button>
+      </div>
+      <p v-else class="body-copy empty">{{ positionQuery.trim() ? '검색 결과가 없습니다.' : '추가할 모집 직무가 없습니다.' }}</p>
+      <div class="selected-positions">
+        <button v-for="position in selectedPositions" :key="position.id" type="button" class="chip" :aria-label="`${position.name} 연결 해제`" @click="removePosition(position.id)">{{ position.name }} ×</button>
       </div>
     </section>
 

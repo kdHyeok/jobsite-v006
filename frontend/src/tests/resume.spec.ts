@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, shallowMount } from '@vue/test-utils'
 import ResumeSection from '../components/ResumeSection.vue'
+import ResumeEditor from '../components/ResumeEditor.vue'
 import { SECTIONS, emptyContent, emptyRow, fillContent } from '../types/resume'
-import type { ResumeContent } from '../types/resume'
+import type { Resume, ResumeContent } from '../types/resume'
+import type { Position } from '../types/position'
 
 /** 백엔드 ResumeContent 와 키가 어긋나면 값이 조용히 사라진다. 여기서 모양을 고정한다. */
 describe('이력서 문서 모양', () => {
@@ -22,6 +24,22 @@ describe('이력서 문서 모양', () => {
     expect(filled.basic.phone).toBe('')
     expect(filled.educations[0]).toEqual({ ...emptyRow(SECTIONS[0]), school: '테스트 대학교' })
     expect(filled.projects).toEqual([])
+  })
+})
+
+describe('지원 직무 선택', () => {
+  it('검색어가 없어도 미선택 직무 전체를 최근 수정순으로 보여준다', () => {
+    const resume = { id: 'resume', name: '이력서', content: emptyContent(), positionIds: ['selected'], createdAt: '', updatedAt: '' } as Resume
+    const positions = [
+      { id: 'old', name: '이전 직무', companyName: 'A', postingTitle: '공고', updatedAt: '2026-09-01T00:00:00Z' },
+      { id: 'selected', name: '선택 직무', companyName: 'B', postingTitle: '공고', updatedAt: '2026-09-16T00:00:00Z' },
+      { id: 'new', name: '최신 직무', companyName: 'C', postingTitle: '공고', updatedAt: '2026-09-15T00:00:00Z' },
+    ] as Position[]
+    const wrapper = shallowMount(ResumeEditor, { props: { resume, positions, saving: false, apiFieldErrors: {} } })
+
+    expect(wrapper.findAll('.position-option strong').map((item) => item.text())).toEqual(['최신 직무', '이전 직무'])
+    const section = wrapper.findAll('.resume-section')[0]
+    expect(section.element.firstElementChild?.nextElementSibling?.matches('.field')).toBe(true)
   })
 })
 
