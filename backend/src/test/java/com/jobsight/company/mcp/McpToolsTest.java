@@ -76,6 +76,25 @@ class McpToolsTest {
         }
         verifyNoInteractions(companies);
     }
+    @Test void resumeAndSelfIntroductionInputsReachServices() {
+        UUID resumeId = UUID.randomUUID();
+        tools.call("resume_create", Map.of("request", Map.of(
+                "name", "플러그인 테스트 이력서",
+                "content", Map.of("basic", Map.of("name", "테스트 사용자")),
+                "positionIds", List.of())), principal);
+        verify(resumes).create(argThat(request -> request.name().equals("플러그인 테스트 이력서")
+                && request.content().basic().name().equals("테스트 사용자")));
+
+        when(selfIntroductions.create(any())).thenReturn(new com.jobsight.company.selfintro.dto.SelfIntroductionResponse(
+                UUID.randomUUID(), List.of(resumeId), "지원 동기", "협업 경험", java.time.Instant.EPOCH, java.time.Instant.EPOCH));
+        tools.call("self_intro_create", Map.of("request", Map.of(
+                "resumeIds", List.of(resumeId.toString()), "question", "지원 동기", "answer", "협업 경험")), principal);
+        tools.call("self_intro_list", Map.of("q", "협업", "resumeId", resumeId.toString()), principal);
+
+        verify(selfIntroductions).create(argThat(request -> request.resumeIds().equals(List.of(resumeId))
+                && request.question().equals("지원 동기") && request.answer().equals("협업 경험")));
+        verify(selfIntroductions).findAll("협업", resumeId);
+    }
     @Test void defaultsAndRelationshipArgumentsArePreserved() {
         tools.call("posting_list", Map.of(), principal);
         verify(postings).findOpen();

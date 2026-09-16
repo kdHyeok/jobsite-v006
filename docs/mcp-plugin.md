@@ -137,6 +137,7 @@ MCP 는 문서 전체를 되돌려 보내기 어려워 서버가 조회→한 �
 ### 이력서·자기소개 CRUD와 OAuth 갱신 검증 (0.3.0, 2026-09-16)
 
 - 플러그인 manifest와 SKILL에 이력서·자기소개 전체 CRUD를 명시했고 공식 플러그인·스킬 구조 검사를 통과했다.
+- MCP 경계 테스트에서 이력서 content, 자기소개 질문·답변·이력서 연결, 검색어·이력서 필터가 각 서비스로 그대로 전달되는지 검증한다.
 - 컨테이너 `compileJava compileTestJava test --tests '*Mcp*Test'`: 종료코드 0, `BUILD SUCCESSFUL`, 16개 통과.
   인가 코드 교환, refresh token 발급·회전, 이전 토큰 재사용 거부, 정지 계정 접근 거부를 검증했다.
 - Compose 재빌드 후 PostgreSQL 마이그레이션이 `now at version v21`, 백엔드 healthy, 스모크 45개 PASS다.
